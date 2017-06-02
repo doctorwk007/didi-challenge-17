@@ -1,0 +1,6 @@
+<launch>
+  <include file="$(find velodyne_pointcloud)/launch/didi-32.launch" />
+  <include file="$(find didi_challenge)/launch/smart_tracker.launch" />
+  <include file="$(find didi_challenge)/launch/interpolation.launch" />
+  <!--<include file="$(find didi_challenge)/launch/tracklet_gen.launch" />-->
+</launch>

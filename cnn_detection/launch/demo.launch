@@ -1,0 +1,85 @@
+<launch>
+
+  <env name="GLOG_minloglevel" value="2" />
+
+  <!-- PARAMETERS -->
+  <!-- Sockets usually hangs... so here you can change the port -->
+  <arg name="port" default="4003" />
+  <arg name="stdout" default="log" />
+
+  <!-- If time is not a problem, set true -->
+  <!-- to wait until exact extrinsics are obtained -->
+  <arg name="sync_ext" default="false" />
+
+  <arg name="height" default="400" />
+  <arg name="width" default="0" />
+  <arg name="y_offset" default="200" />
+  <arg name="scale" default="400" />
+
+  <arg name="net_name" default="regular" />
+
+  <!-- Cropper manager -->
+  <node pkg="nodelet" type="nodelet" name="cropper_manager" args="manager"/>
+
+  <!-- Crop the (big) original images -->
+  <node pkg="nodelet" type="nodelet" name="cropper_right"
+      args="load image_proc/crop_decimate cropper_manager"
+      respawn="true">
+    <!-- height: 400 -->
+    <!-- y_offset: 200 -->
+    <param name="height" type="int" value="$(arg height)"/>
+    <param name="width" type="int" value="$(arg width)"/>
+    <param name="y_offset" type="int" value="$(arg y_offset)"/>
+
+    <remap from="camera/image_raw" to="/stereo_camera/right/image_rect_color" />
+    <remap from="camera/image_info" to="/stereo_camera/right/camera_info" />
+    <remap from="camera_out/image_raw" to="/stereo_roi/right/image_rect_color" />
+    <remap from="camera_out/image_info" to="/stereo_roi/right/camera_info" />
+  </node>
+
+  <node pkg="nodelet" type="nodelet" name="cropper_left"
+      args="load image_proc/crop_decimate cropper_manager"
+      respawn="true">
+    <!-- height: 400 -->
+    <!-- y_offset: 200 -->
+    <param name="height" type="int" value="$(arg height)"/>
+    <param name="width" type="int" value="$(arg width)"/>
+    <param name="y_offset" type="int" value="$(arg y_offset)"/>
+
+    <remap from="camera/image_raw" to="/stereo_camera/left/image_rect_color" />
+    <remap from="camera/image_info" to="/stereo_camera/left/camera_info" />
+    <remap from="camera_out/image_raw" to="/stereo_roi/left/image_rect_color" />
+    <remap from="camera_out/image_info" to="/stereo_roi/left/camera_info" />
+  </node>
+
+  <!-- OBJECT DETECTION BRANCH -->
+  <group ns="cnn">
+    <param name="port" value="$(arg port)" />
+    <!-- First stage -->
+    <node pkg="cnn_detection" type="image_sender_idx" name="image_sender" output="$(arg stdout)" required="true">
+      <remap from="/stereo_camera/left/image_rect_color" to="/stereo_roi/left/image_rect_color"/>
+    </node>
+
+    <!-- Faster R-CNN classifier - Modified for ROIs inclusion-->
+    <node pkg="cnn_detection" type="stream.py" name="stream_classify" output="$(arg stdout)" required="true">
+      <param name="~use_external_rois" value="False" />
+      <param name="~scale" value="$(arg scale)" />
+      <param name="~net_name" value="$(arg net_name)" />
+    </node>
+
+    <!-- NMS-->
+    <node pkg="cnn_detection" type="nms_detections.py" name="nms" output="$(arg stdout)" required="true">
+      <param name="~y_offset" value="$(arg y_offset)" />
+      <param name="~net_name" value="$(arg net_name)" />
+    </node>
+
+    <!-- RESULTS -->
+    <!-- Painter - Modified for ROIs inclusion -->
+    <node pkg="cnn_detection" type="obstacle_painter.py" name="painter" output="$(arg stdout)" required="true">
+      <param name="~publish_rois_debug" value="False" />
+      <param name="~height" type="int" value="$(arg height)"/>
+      <param name="~y_offset" type="int" value="$(arg y_offset)"/>
+    </node>
+  </group>
+
+</launch>

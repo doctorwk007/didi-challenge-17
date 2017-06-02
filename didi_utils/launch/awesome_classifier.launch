@@ -1,0 +1,44 @@
+<launch>
+
+  <arg name="scale" default="700" />
+  <arg name="port" default="4003" />
+  <arg name="stdout" default="screen" />
+  <arg name="net_name" default="didi" />
+
+  <include file="$(find didi_challenge)/launch/laser_birdview.launch" />
+
+  <!-- OBJECT DETECTION BRANCH -->
+  <group ns="cnn">
+    <param name="port" value="$(arg port)" />
+    <!-- First stage -->
+    <node pkg="cnn_detection" type="image_sender_idx" name="image_sender" output="$(arg stdout)" required="true">
+      <remap from="/stereo_camera/left/image_rect_color" to="/bird_view"/>
+    </node>
+
+    <!-- Faster R-CNN classifier - Modified for ROIs inclusion-->
+    <node pkg="cnn_detection" type="stream.py" name="stream_classify" output="$(arg stdout)" required="true">
+      <param name="~use_external_rois" value="False" />
+      <param name="~scale" value="$(arg scale)" />
+      <param name="~net" value="$(arg net_name)" />
+    </node>
+
+    <!-- NMS-->
+    <node pkg="cnn_detection" type="nms_detections.py" name="nms" output="$(arg stdout)" required="true">
+      <param name="~y_offset" value="0" />
+      <param name="~net" value="$(arg net_name)" />
+    </node>
+
+    <!-- RESULTS -->
+    <!-- Painter - Modified for ROIs inclusion -->
+    <!-- <node pkg="cnn_detection" type="obstacle_painter.py" name="painter" output="$(arg stdout)" required="true">
+      <param name="~publish_rois_debug" value="False" />
+      <param name="~height" type="int" value="700"/>
+      <param name="~y_offset" type="int" value="0"/>
+      <remap from="/stereo_camera/left/image_rect_color" to="/bird_view"/>
+    </node> -->
+  </group>
+
+  <include file="$(find didi_challenge)/launch/smart_tracker.launch" />
+  <include file="$(find didi_challenge)/launch/interpolation.launch" />
+  <include file="$(find didi_challenge)/launch/tracklet_gen.launch" />
+</launch>

@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="didi_challenge" type="smart_tracking" name="smart_tracking" output="screen"/>
+</launch>

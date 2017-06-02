@@ -1,0 +1,18 @@
+<launch>
+
+  <arg name="scale" default="700" />
+  <arg name="port" default="4003" />
+  <arg name="stdout" default="screen" />
+  <arg name="net_name" default="didi" />
+
+  <include file="$(find didi_challenge)/launch/laser_birdview.launch" />
+  <include file="$(find cnn_detection)/launch/didi.launch" pass_all_args="true"/>
+
+  <group ns="cnn">
+    <node name="result" pkg="image_view" type="image_view" respawn="false" output="screen">
+      <remap from="image" to="nice_demo"/>
+      <param name="autosize" value="false" />
+    </node>
+  </group>
+
+</launch>

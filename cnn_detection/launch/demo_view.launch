@@ -1,0 +1,26 @@
+<launch>
+  <arg name="port" default="4003" />
+  <arg name="stdout" default="screen" /> <!-- screen or log -->
+
+  <arg name="sync_ext" default="true" />
+  <arg name="height" default="0" /> <!-- ROI: 400 -->
+  <arg name="width" default="0" />
+  <arg name="y_offset" default="0" /> <!-- ROI: 150 -->
+  <arg name="scale" default="400" />
+
+  <arg name="net_name" default="regular" />
+
+  <!--include file="$(find bgra_to_bgr)/launch/stereo_offline.launch" /-->
+  <include file="$(find image_conversion)/launch/adapt_bags.launch" />
+  <include file="$(find cnn_detection)/launch/demo.launch" pass_all_args="true"/>
+  <include file="$(find disparity)/launch/disparity_color_sgbm.launch"/>
+  <include file="$(find pcl_utils)/launch/pcl_nodelet.launch" />
+
+  <group ns="cnn">
+    <node name="result" pkg="image_view" type="image_view" respawn="false" output="screen">
+      <remap from="image" to="nice_demo"/>
+      <param name="autosize" value="false" />
+    </node>
+  </group>
+
+</launch>

@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="didi_challenge" type="tracklet_generator.py" name="tracklet_generator" output="screen"/>
+</launch>

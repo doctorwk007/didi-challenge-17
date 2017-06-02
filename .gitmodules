@@ -1,0 +1,3 @@
+[submodule "cnn_detection/lsi-faster-rcnn"]
+	path = cnn_detection/lsi-faster-rcnn
+	url = https://github.com/cguindel/lsi-faster-rcnn.git
