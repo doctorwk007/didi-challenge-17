@@ -14,6 +14,7 @@ frames = []
 def write_tracklets(tracklet_list, topic, bag_file, color):
     for tracklet in tracklet_list:
         index = 0
+        sphere_diameter = max(tracklet.size)
         for pose in tracklet:
             mkr = Marker()
             mkr.header.frame_id = "velodyne"
@@ -27,9 +28,9 @@ def write_tracklets(tracklet_list, topic, bag_file, color):
             mkr.pose.orientation.y = 0
             mkr.pose.orientation.z = 0
             mkr.pose.orientation.w = 1.0
-            mkr.scale.x = 4.0
-            mkr.scale.y = 4.0
-            mkr.scale.z = 4.0
+            mkr.scale.x = sphere_diameter
+            mkr.scale.y = sphere_diameter
+            mkr.scale.z = sphere_diameter
             mkr.color = color
             mkr.lifetime = rospy.Duration(0.04)
             bag_file.write(topic, mkr, mkr.header.stamp)
