@@ -28,3 +28,4 @@ utils/kitti_tools/data
 drivers/gscam/lib/*
 
 models/*.caffemodel
+.idea/

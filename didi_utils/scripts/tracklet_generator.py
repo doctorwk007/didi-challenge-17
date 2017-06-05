@@ -290,8 +290,12 @@ def hack_callback():
             gps_rear['tx'],
             gps_rear['ty'],
             'g-')
-        fig.savefig(os.path.join("/home/beltran/Desktop/", 'plot.png'))
-        plt.close(fig)
+
+        # plot_path = os.path.expanduser('~/Desktop/plot.png')
+        # if not os.path.exists(plot_path):
+        #     os.makedirs(plot_path)
+        # fig.savefig(plot_path)
+        # plt.close(fig)
 
         # Create TrackletCollection with specified time shift
         timeshift = 10
@@ -353,7 +357,9 @@ def hack_callback():
 
 def write_tracklets_xml():
     global collection
-    tracklet_path = os.path.join("/home/beltran/Downloads/Didi-Release-2/Data/", 'hacked_tracklet_labels.xml')
+    tracklet_path = os.path.os.path.expanduser('~/Desktop/Didi-Release-2/tracklet_labels.xml')
+    if not os.path.exists(tracklet_path):
+        os.makedirs(tracklet_path)
     collection.write_xml(tracklet_path)
     print ('Tracklets file ready')
 
