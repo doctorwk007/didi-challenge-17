@@ -291,9 +291,10 @@ def hack_callback():
             gps_rear['ty'],
             'g-')
 
-        # plot_path = os.path.expanduser('~/Desktop/plot.png')
+        # plot_path = os.path.expanduser('~/Desktop/')
         # if not os.path.exists(plot_path):
         #     os.makedirs(plot_path)
+    	# plot_path = os.path.join(tracklet_path, "plot.png")
         # fig.savefig(plot_path)
         # plt.close(fig)
 
@@ -357,9 +358,10 @@ def hack_callback():
 
 def write_tracklets_xml():
     global collection
-    tracklet_path = os.path.os.path.expanduser('~/Desktop/Didi-Release-2/tracklet_labels.xml')
+    tracklet_path = os.path.os.path.expanduser('~/Desktop/Didi-Release-2/')
     if not os.path.exists(tracklet_path):
         os.makedirs(tracklet_path)
+    tracklet_path = os.path.join(tracklet_path, "tracklets.xml")
     collection.write_xml(tracklet_path)
     print ('Tracklets file ready')
 
@@ -369,9 +371,9 @@ if __name__ == '__main__':
     rospy.Subscriber("image_raw", Image, image_callback)
     rospy.Subscriber("/objects/capture_vehicle/rear/gps/rtkfix", Odometry, rear_rtk_callback)
     rospy.Subscriber("/objects/capture_vehicle/front/gps/rtkfix", Odometry, front_rtk_callback)
-    rospy.Subscriber("interpolated_detections", ObstacleList, obs_callback)
-    # rospy.on_shutdown(write_tracklets_xml)
-    rospy.on_shutdown(hack_callback)
+    rospy.Subscriber("interpolated_detections", ObstacleList, obstacle_callback)
+    rospy.on_shutdown(write_tracklets_xml)
+    # rospy.on_shutdown(hack_callback)
 
     print ("Hey man, keep calm, I'm preparing your tracklets...")
     rospy.spin()
