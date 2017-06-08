@@ -1,6 +1,7 @@
 import os
 import sys
 import rospy
+import tf
 import rosbag
 import argparse
 from parse_tracklet import *
@@ -11,26 +12,38 @@ from shutil import copyfile
 frames = []
 
 
-def write_tracklets(tracklet_list, topic, bag_file, color):
+def write_tracklets(tracklet_list, topic, bag_file, color, as_sphere):
     for tracklet in tracklet_list:
         index = 0
-        sphere_diameter = max(tracklet.size)
+        if as_sphere:
+            sphere_diameter = max(tracklet.size)
         for pose in tracklet:
             mkr = Marker()
             mkr.header.frame_id = "velodyne"
             mkr.header.stamp = frames[tracklet.first_frame+index]
-            mkr.type = 2  # sphere
             mkr.action = 0
             mkr.pose.position.x = pose[0][0]
             mkr.pose.position.y = pose[0][1]
             mkr.pose.position.z = pose[0][2]
-            mkr.pose.orientation.x = 0
-            mkr.pose.orientation.y = 0
-            mkr.pose.orientation.z = 0
-            mkr.pose.orientation.w = 1.0
-            mkr.scale.x = sphere_diameter
-            mkr.scale.y = sphere_diameter
-            mkr.scale.z = sphere_diameter
+            if not as_sphere:  #
+                mkr.type = 1  # sphere
+                quaternion = tf.transformations.quaternion_from_euler(0, 0, pose[1][2])
+                mkr.pose.orientation.x = quaternion[0]
+                mkr.pose.orientation.y = quaternion[1]
+                mkr.pose.orientation.z = quaternion[2]
+                mkr.pose.orientation.w = quaternion[3]
+                mkr.scale.x = tracklet.size[2]
+                mkr.scale.y = tracklet.size[1]
+                mkr.scale.z = tracklet.size[0]
+            else:
+                mkr.type = 2  # sphere
+                mkr.pose.orientation.x = 0
+                mkr.pose.orientation.y = 0
+                mkr.pose.orientation.z = 0
+                mkr.pose.orientation.w = 1
+                mkr.scale.x = sphere_diameter
+                mkr.scale.y = sphere_diameter
+                mkr.scale.z = sphere_diameter
             mkr.color = color
             mkr.lifetime = rospy.Duration(0.04)
             bag_file.write(topic, mkr, mkr.header.stamp)
@@ -47,7 +60,10 @@ def main():
     parser.add_argument('-gt', '--groundtruth', type=str, nargs='?', default='tracklet_labels_gt.xml',
                         help='Groundtruth tracklet label filename')
     parser.add_argument('-b', '--bag', type=str, nargs='?', help='Sequence .bag filename')
+    parser.add_argument('--sphere', dest='as_sphere', action='store_true', help='Markers as spheres')
+
     args = parser.parse_args()
+    as_sphere = args.as_sphere
     pred_file = args.prediction
     if not os.path.exists(pred_file):
         sys.stderr.write('Error: Prediction file %s not found.\n' % pred_file)
@@ -90,11 +106,11 @@ def main():
     # Write prediction marker msgs synchronized with camera frames
     color = ColorRGBA()
     color.r, color.g, color.b, color.a = 1.0, 0.0, 0.0, 0.5
-    write_tracklets(pred_tracklets, "prediction_marker", bag, color)
+    write_tracklets(pred_tracklets, "prediction_marker", bag, color, as_sphere)
 
     # Write ground truth marker msgs synchronized with camera frames
     color.r, color.g, color.b, color.a = 0.0, 1.0, 0.0, 0.5
-    write_tracklets(gt_tracklets, "gt_marker", bag, color)
+    write_tracklets(gt_tracklets, "gt_marker", bag, color, as_sphere)
 
     bag.close()
 
