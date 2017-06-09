@@ -62,6 +62,7 @@ void camera_sub_callback(sensor_msgs::ImageConstPtr msg){
             temp.location.z=matched_a[i][2]*msg->header.stamp.toSec()+matched_b[i][2];
             temp.alpha=matched_a[i][3]*msg->header.stamp.toSec()+matched_b[i][3];
             temp.height=matched_a[i][4]*msg->header.stamp.toSec()+matched_b[i][4];
+            temp.yaw=matched_a[i][5]*msg->header.stamp.toSec()+matched_b[i][5];
             interpolated.obstacles.push_back(temp);
 
             //cout<<setprecision(14)<<ros::Time::now()<<endl;
@@ -150,8 +151,8 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
 
 
                     vector<double> a,b;
-                    a.resize(5,0);
-                    b.resize(5,0);
+                    a.resize(6,0);
+                    b.resize(6,0);
 
                     //get linear coefficients to interpolate the desired values
                     get_linear_coefficients(last_detected.header.stamp.toSec(),msg->header.stamp.toSec(),last_detected.obstacles[j].location.x,msg->obstacles[i].location.x,a[0],b[0]);
@@ -159,6 +160,7 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                     get_linear_coefficients(last_detected.header.stamp.toSec(),msg->header.stamp.toSec(),last_detected.obstacles[j].location.z,msg->obstacles[i].location.z,a[2],b[2]);
                     get_linear_coefficients(last_detected.header.stamp.toSec(),msg->header.stamp.toSec(),last_detected.obstacles[j].alpha,msg->obstacles[i].alpha,a[3],b[3]);
                     get_linear_coefficients(last_detected.header.stamp.toSec(),msg->header.stamp.toSec(),last_detected.obstacles[j].height,msg->obstacles[i].height,a[4],b[4]);
+                    get_linear_coefficients(last_detected.header.stamp.toSec(),msg->header.stamp.toSec(),last_detected.obstacles[j].yaw,msg->obstacles[i].yaw,a[5],b[5]);
 
 
                     if(online==false){
@@ -180,6 +182,7 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                         temp.location.z=a[2]*useful_timestamps[k].toSec()+b[2]-1.72;
                         temp.alpha=a[3]*useful_timestamps[k].toSec()+b[3];
                         temp.height=a[4]*useful_timestamps[k].toSec()+b[4];
+                        temp.yaw=a[5]*useful_timestamps[k].toSec()+b[5];
 
                         interpolated.obstacles.push_back(temp);
 
