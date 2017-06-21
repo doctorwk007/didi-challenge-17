@@ -20,7 +20,7 @@ def parse_camera_tracklets(tracklet_list):
             width = tracklet.size[1]
             # yaw = pose[1][2]
 
-            cam_gt.append([pose[0][0], pose[0][1], pose[1][2], length, width])
+            cam_gt.append([pose[0][0], pose[0][1], pose[1][2], length, width, tracklet.object_type])
             index += 1
 
 
@@ -45,6 +45,7 @@ def interpolate_velo_tracklets(images_path):
             yaw = prev_gt[2] * (1-coefficient) + next_gt[2] * coefficient
             length = prev_gt[3]
             width = prev_gt[4]
+            category = prev_gt[5]
 
             # Compute the four vertexes coordinates
             corners = np.array([[centroid[0]-length/2., centroid[1]+width/2.],
@@ -94,7 +95,7 @@ def interpolate_velo_tracklets(images_path):
                     print 'Created %s' % filename
                     with open(os.path.join(images_path, filename), 'a') as f:
                         line = '{:s} -1 -1 {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} -1 -1 -1 -1000 -1000 -1000 -10\n'.format(
-                            'Pedestrian', current_yaw, leftpx, toppx, rightpx, bottompx)
+                            category, current_yaw, leftpx, toppx, rightpx, bottompx)
                         f.write(line)
                         f.close()
 
