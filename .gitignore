@@ -29,3 +29,5 @@ drivers/gscam/lib/*
 
 models/*.caffemodel
 .idea/
+
+CATKIN_IGNORE

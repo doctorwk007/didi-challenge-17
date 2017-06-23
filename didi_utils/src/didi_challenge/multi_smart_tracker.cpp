@@ -40,7 +40,9 @@ perception_msgs::ObstacleList MultiSmartTracker::get_obstacle_list(const cv::Mat
     for (int i = 0; i < trackers_.size(); ++i){
         if(trackers_[i].is_active()){
             perception_msgs::Obstacle obs = trackers_[i].get_obstacle(frame, cell_size, grid_dim);
-            if(obs.location.z>0.3) obs_list.obstacles.push_back(obs); // TODO Adjust threshold. Previously: 0.5
+            if(fabs(obs.location.x)>3.5 && fabs(obs.location.y)>1.5){ //Ego-car: width 1.86, height 4.93
+                if(obs.location.z>0.3 ) obs_list.obstacles.push_back(obs); // TODO Adjust threshold. Previously: 0.5
+            }
         }
     }
     return obs_list;

@@ -3,11 +3,11 @@
   <arg name="scale" default="700" />
   <arg name="port" default="4003" />
   <arg name="stdout" default="screen" />
-  <arg name="net_name" default="didi" />
+  <arg name="net_name" default="didi2p" />
 
   <include file="$(find didi_challenge)/launch/laser_birdview.launch">
-    <arg name="grid_dim" value="70" />
-    <arg name="cell_size" value="0.1" />
+    <arg name="grid_dim" value="35" />
+    <arg name="cell_size" value="0.05" />
   </include>
 
   <!-- OBJECT DETECTION BRANCH -->
