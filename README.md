@@ -38,7 +38,13 @@ Package developed at [Intelligent Systems Laboratory](http://www.uc3m.es/islab),
     ```
 
 ## How to run?
-`roslaunch didi_utils awesome_classifier.launch`
+For cars: 
+
+`roslaunch didi_challenge awesome_classifier.launch`
+
+For pedestrians:
+
+`roslaunch didi_challenge pedestrian_classifier.launch`
 
 ## Known issues
 If compiler complains about some OpenCv dependency, make sure CMakeLists.txt points to the actual OpenCv installation path in your computer (remember to install them along with _opencv__contrib_)
