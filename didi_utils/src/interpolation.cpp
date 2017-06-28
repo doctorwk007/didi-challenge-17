@@ -9,6 +9,7 @@
 #include <sensor_msgs/Image.h>
 #include <perception_msgs/ObstacleList.h>
 
+#include <Eigen/Core>
 
 using namespace std;
 
@@ -19,13 +20,21 @@ ros::Publisher interpolated_pub,marker_pub;
 
 bool online,marker_visualization;
 perception_msgs::ObstacleList last_detected;
+perception_msgs::ObstacleList poses_to_yaw;
 vector<int> matched_indices;
 
 //array of interpolation coefficients
 vector<vector<double>> matched_a,matched_b; //x,y,z,alpha, height
 
+//parameters to refine the detection
+double max_length,min_length,max_width,min_width,max_height,min_height;
+
 visualization_msgs::Marker sphere_marker;
 visualization_msgs::MarkerArray marker_array;
+
+
+
+double angle_between(Eigen::Vector3d axis1, Eigen::Vector3d axis2);
 
 
 void get_linear_coefficients(const double &time0,const double &time1,const float &y0,const float &y1, double &a,double &b){
@@ -133,10 +142,6 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                 bool match=false;
 
 
-
-
-
-
                 for (j=0;j<last_detected.obstacles.size();j++){
                     if(last_detected.obstacles[j].id==msg->obstacles[i].id){
                         //std::cout <<"MATCH in: "<<last_detected.obstacles[j].id<<" =" <<msg->obstacles[i].id<<endl;
@@ -147,8 +152,6 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
 
                 if(match==true){
                     //DO INTERPOLATION HERE
-
-
 
                     vector<double> a,b;
                     a.resize(6,0);
@@ -180,33 +183,74 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                         temp.location.x=a[0]*useful_timestamps[k].toSec()+b[0];
                         temp.location.y=a[1]*useful_timestamps[k].toSec()+b[1];
                         temp.location.z=a[2]*useful_timestamps[k].toSec()+b[2]-1.72;
-                        temp.alpha=a[3]*useful_timestamps[k].toSec()+b[3];
+                        //temp.alpha=a[3]*useful_timestamps[k].toSec()+b[3];
                         temp.height=a[4]*useful_timestamps[k].toSec()+b[4];
-                        temp.yaw=a[5]*useful_timestamps[k].toSec()+b[5];
+                        //temp.yaw=a[5]*useful_timestamps[k].toSec()+b[5];
+
+                        static Eigen::Vector3d front_direction(1.0,0.0,0.0);
+                        Eigen::Vector3d car_vector(poses_to_yaw.obstacles[j].location.x-temp.location.x,poses_to_yaw.obstacles[j].location.y-temp.location.y,0);
+                        double yaw=angle_between(car_vector,front_direction);
+
+                        //TODO make some kind of mean between the stimated from the birdview and the one from the vectors, give weigths to the distance
+                        temp.alpha=yaw;
+                        temp.yaw=yaw;
+
+                        double height,width,length;
+                        height=last_detected.obstacles[j].height;
+
+                        //length and width may be interchanged depending on the yaw angle
+                        if((0<abs(yaw)<M_PI/4)||3*M_PI/4<abs(yaw)<M_PI){
+
+                            length=last_detected.obstacles[j].length;
+                            width=last_detected.obstacles[j].width;
+                        }
+
+                        else{
+                            width=last_detected.obstacles[j].length;
+                            length=last_detected.obstacles[j].width;
+                        }
+
+                        //puth thresholds in the dimensions
+                        if(height<min_height) height=min_height;
+                        else if(height>max_height) height=max_height;
+
+                        if(width<min_width) width=min_width;
+                        else if(width>max_width) width=max_width;
+
+                        if(length<min_length) length=min_length;
+                        else if(length>max_length) length=max_length;
+
+                        //TODO change the point position in function of the dimensions change and in function of the yaw angle
+
+
+
+
+                        poses_to_yaw.obstacles[j].location.x=temp.location.x;
+                        poses_to_yaw.obstacles[j].location.y=temp.location.y;
 
                         interpolated.obstacles.push_back(temp);
 
                         //marker visualization
                         if(marker_visualization==true){
-                                float sphere_size=max(max(temp.height,temp.width),temp.length);
-                                sphere_marker.header.stamp=useful_timestamps[k];
-                                sphere_marker.scale.x=sphere_size;
-                                sphere_marker.scale.y=sphere_size;
-                                sphere_marker.scale.z=sphere_size;
+                            float sphere_size=max(max(temp.height,temp.width),temp.length);
+                            sphere_marker.header.stamp=useful_timestamps[k];
+                            sphere_marker.scale.x=sphere_size;
+                            sphere_marker.scale.y=sphere_size;
+                            sphere_marker.scale.z=sphere_size;
 
-                                sphere_marker.pose.position.x=temp.location.x;
-                                sphere_marker.pose.position.y=temp.location.y;
-                                sphere_marker.pose.position.z=temp.location.z-1.72;
+                            sphere_marker.pose.position.x=temp.location.x;
+                            sphere_marker.pose.position.y=temp.location.y;
+                            sphere_marker.pose.position.z=temp.location.z-1.72;
 
-                                marker_array.markers.push_back(sphere_marker);
+                            marker_array.markers.push_back(sphere_marker);
 
-                                //   sphere.
+                            //   sphere.
 
                         }
 
                         //cout<<setprecision(14)<<ros::Time::now()<<endl;
 
-                        std::cout << std::setprecision(14)<<" Interpolation Time: "<<temp.header.stamp.toSec()<<" X "<<temp.location.x<<" Y "<<temp.location.y<<" alpha "<<temp.alpha<<" height "<<temp.height<<"\n";
+                        std::cout << std::setprecision(14)<<" Interpolation Time: "<<temp.header.stamp.toSec()<<" X "<<temp.location.x<<" Y "<<temp.location.y<<" alpha "<<temp.alpha<<" height "<<temp.height<< "Yaw: "<<temp.yaw<<"\n";
 
 
                         std::cout << std::setprecision(14)<<" to Time: "<<msg->header.stamp.toSec()<<" X "<<msg->obstacles[i].location.x<<" Y "<<msg->obstacles[i].location.y<<" alpha "<<msg->obstacles[i].alpha<<" height "<<msg->obstacles[i].height<<"\n\n";
@@ -246,6 +290,7 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
     else
     {
         first_time=false;
+
     }
     //update the starting point of the interpolation
     last_detected=*msg;
@@ -253,7 +298,7 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
     //camera_timestamps.clear();
 
     //std::cout <<"publishing "<<interpolated.obstacles.size()<<"..\n\n\n";
-
+    poses_to_yaw=*msg;
 
 
 
@@ -275,6 +320,13 @@ int main(int argc, char* argv[]){
     private_nh.param<string>("markers_pub_topic",markers_pub_topic,"markers");
     private_nh.param("online",online,false);
     private_nh.param("marker_visualization",marker_visualization,true);
+
+    private_nh.param("max_height",max_height,1.65);
+    private_nh.param("min_height",min_height,1.40);
+    private_nh.param("max_width",max_width,1.8);
+    private_nh.param("min_width",min_width,1.67);
+    private_nh.param("max_length",max_length,4.52);
+    private_nh.param("min_length",min_length,4.26);
 
 
 
@@ -312,4 +364,20 @@ int main(int argc, char* argv[]){
     }
 
     return 0;
+}
+
+double angle_between(Eigen::Vector3d axis1, Eigen::Vector3d axis2)
+{
+
+    axis1.normalize();
+    axis2.normalize();
+    double cos = axis1.dot(axis2);
+    double rad = acos(cos);
+    if(axis1[1]<0)
+        rad=2*M_PI-rad;
+    //float deg = (rad*180)/PI;
+    //deg=std::min(deg,180-deg);
+    //deg=std::abs(deg);
+    cout<<"angle calculated: "<<rad<<endl;
+    return rad;
 }
