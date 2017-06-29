@@ -30,8 +30,16 @@ vector<vector<double>> matched_a,matched_b; //x,y,z,alpha, height
 double last_x,last_y;
 double last_angle = -9999;
 
+//parameters to refine the detection
+double max_length,min_length,max_width,min_width,max_height,min_height;
+
+
 visualization_msgs::Marker sphere_marker;
 visualization_msgs::MarkerArray marker_array;
+
+double angle_between(Eigen::Vector3d axis1, Eigen::Vector3d axis2);
+
+
 
 double angle_between(Eigen::Vector3d axis1, Eigen::Vector3d axis2);
 
@@ -190,8 +198,37 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                         Eigen::Vector3d car_vector(temp.location.x-poses_to_yaw.obstacles[j].location.x,temp.location.y-poses_to_yaw.obstacles[j].location.y,0);
                         double yaw=angle_between(car_vector,front_direction);
 
+                        //TODO make some kind of mean between the stimated from the birdview and the one from the vectors, give weigths to the distance
                         temp.alpha=yaw;
                         temp.yaw=yaw;
+
+                        double height,width,length;
+                        height=last_detected.obstacles[j].height;
+
+                        //length and width may be interchanged depending on the yaw angle
+                        if((0<abs(yaw)<M_PI/4)||3*M_PI/4<abs(yaw)<M_PI){
+
+                            length=last_detected.obstacles[j].length;
+                            width=last_detected.obstacles[j].width;
+                        }
+
+                        else{
+                            width=last_detected.obstacles[j].length;
+                            length=last_detected.obstacles[j].width;
+                        }
+
+                        //puth thresholds in the dimensions
+                        if(height<min_height) height=min_height;
+                        else if(height>max_height) height=max_height;
+
+                        if(width<min_width) width=min_width;
+                        else if(width>max_width) width=max_width;
+
+                        if(length<min_length) length=min_length;
+                        else if(length>max_length) length=max_length;
+
+                        //TODO change the point position in function of the dimensions change and in function of the yaw angle
+
 
 
                         poses_to_yaw.obstacles[j].location.x=temp.location.x;
@@ -290,6 +327,13 @@ int main(int argc, char* argv[]){
     private_nh.param("online",online,false);
     private_nh.param("marker_visualization",marker_visualization,true);
 
+    private_nh.param("max_height",max_height,1.65);
+    private_nh.param("min_height",min_height,1.40);
+    private_nh.param("max_width",max_width,1.8);
+    private_nh.param("min_width",min_width,1.67);
+    private_nh.param("max_length",max_length,4.52);
+    private_nh.param("min_length",min_length,4.26);
+
 
 
     if(marker_visualization==true){
@@ -342,10 +386,5 @@ double angle_between(Eigen::Vector3d axis1, Eigen::Vector3d axis2)
             rad=-rad;
     }
     last_angle = rad;
-//        rad=2*M_PI-rad;
-    //float deg = (rad*180)/PI;
-    //deg=std::min(deg,180-deg);
-    //deg=std::abs(deg);
-//    cout<<"angle calculated: "<<rad<<endl;
     return rad;
 }
