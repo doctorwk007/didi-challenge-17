@@ -1,0 +1,19 @@
+<launch>
+
+  <arg name="scale" default="700" />
+  <arg name="port" default="4003" />
+  <arg name="stdout" default="screen" />
+  <arg name="net_name" default="didi2p" />
+
+  <param name="/birdview/grid_dim" value="35" />
+  <param name="/birdview/cell_size" value="0.05" />
+
+  <!--<include file="$(find didi_challenge)/launch/smart_tracker.launch" />-->
+
+  <node pkg="didi_challenge" type="smart_tracking" name="smart_tracking" output="screen">
+    <param name="max_missings" value="100" />
+    <param name="min_detections" value="1" />
+  </node>
+  <include file="$(find didi_challenge)/launch/interpolation.launch" />
+  <include file="$(find didi_challenge)/launch/tracklet_gen.launch" />
+</launch>

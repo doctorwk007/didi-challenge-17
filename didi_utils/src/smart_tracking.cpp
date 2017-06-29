@@ -23,6 +23,7 @@ double score_threshold;
 double distance_threshold;
 double cell_size;
 int grid_dim;
+int max_missings, min_detections;
 
 unique_ptr<MultiSmartTracker> tracker;
 
@@ -67,15 +68,19 @@ int main(int argc, char **argv)
 
     private_nh.param("score_threshold", score_threshold, 0.96);
     private_nh.param("distance_threshold", distance_threshold, 100.0);
+    private_nh.param("max_missings", max_missings, 3);
+    private_nh.param("min_detections", min_detections, 2);
 
 
-    public_nh.param("/laser_birdview/cell_size", cell_size, 0.1);
-    public_nh.param("/laser_birdview/grid_dim", grid_dim, 70);
+    public_nh.param("/birdview/cell_size", cell_size, 0.1);
+    public_nh.param("/birdview/grid_dim", grid_dim, 70);
 
+    cout << "Using a grid of " << grid_dim << " square meters with resolution "<<cell_size << endl;
+    cout << "Max missings " << max_missings<< ". Min detections "<< min_detections<< endl;
 
     obst_list_pub_ = private_nh.advertise<perception_msgs::ObstacleList> ("obstacles", 1);
     // Init the MultiTracker pointer
-    tracker = unique_ptr<MultiSmartTracker>(new MultiSmartTracker(tracking_algorithm, score_threshold, distance_threshold, 3, 2));
+    tracker = unique_ptr<MultiSmartTracker>(new MultiSmartTracker(tracking_algorithm, score_threshold, distance_threshold, max_missings, min_detections));
 
     // Debug window
     cv::namedWindow(DRAW_WINDOW);

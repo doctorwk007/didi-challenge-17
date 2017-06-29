@@ -167,11 +167,13 @@ int main(int argc, char *argv[])
     private_nh.param("intensity_threshold", intensity_threshold, 0.05);
     private_nh.param("planes", planes, 32);
     private_nh.param("h_res", h_res, 0.0034889);
-    private_nh.param("cell_size", cell_size, 0.1);
+    public_nh.param("cell_size", cell_size, 0.1);
+    public_nh.param("/birdview/cell_size", cell_size, 0.1);
     private_nh.param("cell_size_height_map", cell_size_height_map, 0.25);
     private_nh.param("height_threshold", height_threshold, 0.10);
     private_nh.param("max_height", max_height, 3.0);//not used, dont know if useful, there are buses that are quite high
-    private_nh.param("grid_dim", grid_dim, 1000);//300*cell_size = total pointcloud size
+//    public_nh.param("grid_dim", grid_dim, 1000);//300*cell_size = total pointcloud size
+    public_nh.param("/birdview/grid_dim", grid_dim, 1000);//300*cell_size = total pointcloud size
     private_nh.param("grid_dim_height_map", grid_dim_height_map, 300);//300*cell_size = total pointcloud size
     private_nh.param("low_opening", low_opening, 24.9);//-24.9 for 64 planes
     private_nh.param("v_res", v_res, 0.4);//0.4 for 64 planes

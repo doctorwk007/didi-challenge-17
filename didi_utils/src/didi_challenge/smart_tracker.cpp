@@ -156,7 +156,8 @@ void SmartTracker::set_missing()
 
     // Decrease nonzero variable
     // tracking_score_ -= (abs(last_nonzero_-cv::countNonZero(bgr[0])))/last_nonzero_ * perfect_score_; //TODO FIX
-    tracking_score_ *= pow(0.98, num_missings_);
+//    tracking_score_ *= pow(0.98, num_missings_); // Original version
+    tracking_score_ *= pow(0.98, num_missings_/5); // TODO CHANGE FOR PEDESTRIAN ROUND
 }
 
 int SmartTracker::get_missings()

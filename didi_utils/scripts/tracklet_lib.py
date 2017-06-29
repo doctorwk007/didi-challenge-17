@@ -79,11 +79,12 @@ class TrackletCollection(object):
             writeln(f, r'<boost_serialization signature="serialization::archive" version="9">', tab_level)
             writeln(f, r'<tracklets class_id="0" tracking_level="0" version="0">', tab_level)
             tab_level += 1
-            writeln(f, '<count>%d</count>' % len(self.tracklets), tab_level)
+            writeln(f, '<count>%d</count>' % (len(self.tracklets)-sum(type(x) is list for x in self.tracklets)), tab_level)
             writeln(f, '<item_version>1</item_version> ', tab_level)
             class_id = 1
             for obj in self.tracklets:
-                class_id = obj.write_xml(f, class_id, tab_level)
+                if type(obj) is not list:
+                    class_id = obj.write_xml(f, class_id, tab_level)
             tab_level -= 1
             writeln(f, '</tracklets>', tab_level)
             writeln(f, '</boost_serialization> ', tab_level)

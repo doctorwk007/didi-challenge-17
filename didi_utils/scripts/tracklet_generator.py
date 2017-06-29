@@ -20,6 +20,7 @@ frames = {}
 tracklets_queue = []
 collection = TrackletCollection()
 last_frame = -1
+aux_poses = []
 
 camera_cols = ["timestamp"]
 camera_dict = defaultdict(list)
@@ -161,7 +162,10 @@ def obstacle_callback(obstacle_list):
 
     global frames
     global collection
+    global last_frame
     camera_frame = frames[str(obstacle_list.header.stamp.to_nsec())[:-6]]
+    if (camera_frame-last_frame) != 1:
+        print ('Hole of %d detected' % (camera_frame-last_frame))
     print ('Detection at frame %d' % current_frame)
     print ('received at %d' % camera_frame)
     for obstacle in obstacle_list.obstacles:
@@ -171,19 +175,43 @@ def obstacle_callback(obstacle_list):
         pose['tz'] = obstacle.location.z
         pose['rx'] = 0
         pose['ry'] = 0
-        pose['rz'] = obstacle.yaw
-        try:
-            print ('New pose received for ID", obstacle.id')
-            collection.tracklets[obstacle.id].poses.append(pose)
-            break
-        except IndexError:
-            print ('Obstacle with ID", obstacle.id, " appended to list')
-            obs_tracklet = Tracklet(
-                object_type=obstacle.kind_name, l=obstacle.length, w=obstacle.width,
-                h=obstacle.height, first_frame=camera_frame)
-            obs_tracklet.poses.append(pose)
-            collection.tracklets.insert(camera_frame, obs_tracklet)
+        pose['rz'] = obstacle.alpha  # TODO CHANGE to obstacle.yaw
+
+        while len(aux_poses) <= obstacle.id:  # Loop to add aux poses for every agent
+            aux_poses.append([])
+
+        while len(collection.tracklets) <= obstacle.id:  # Loop to add tracker elements for every agent
+            collection.tracklets.append([])
+
+        if obstacle.occluded:  # Store inactive agents poses in auxiliary list
+            aux_poses[obstacle.id].append(pose)
+            print ('New inactive pose for ID %d' % obstacle.id)
+
+        else:
+            # try:
+            # Store new pose
+            print ('New pose received for ID %d' % obstacle.id)
+            #collection.tracklets[obstacle.id].poses.append(pose)
+            aux_poses[obstacle.id].append(pose)
+
+            if type(collection.tracklets[obstacle.id]) is list:
+                obs_tracklet = Tracklet(
+                    object_type=obstacle.kind_name, l=obstacle.length, w=obstacle.width,
+                    h=obstacle.height, first_frame=camera_frame)
+                # collection.tracklets.insert(camera_frame, obs_tracklet)
+                collection.tracklets[obstacle.id] = obs_tracklet
+
+            # except IndexError:
+            #     print ('Obstacle with ID %d', obstacle.id, ' appended to list')
+            #     obs_tracklet.poses.append(pose)
+            # If there are poses in auxiliary list, append them before new active pose is inserted
+            # if len(aux_poses) > obstacle.id and len(aux_poses[obstacle.id]) > 0:
+            for p in aux_poses[obstacle.id]:
+                collection.tracklets[obstacle.id].poses.append(p)
+            del(aux_poses[obstacle.id][:])  # Remove all stored poses for current agent
+
     # end of obstacle loop
+    last_frame = camera_frame
 
 
 def obs_callback(obstacle_list):
@@ -369,8 +397,8 @@ if __name__ == '__main__':
     rospy.init_node('tracklet_generator', anonymous=True)
     #rospy.Subscriber("interpolated_detections", ObstacleList, obstacle_callback)
     rospy.Subscriber("image_raw", Image, image_callback)
-    rospy.Subscriber("/objects/capture_vehicle/rear/gps/rtkfix", Odometry, rear_rtk_callback)
-    rospy.Subscriber("/objects/capture_vehicle/front/gps/rtkfix", Odometry, front_rtk_callback)
+    # rospy.Subscriber("/objects/capture_vehicle/rear/gps/rtkfix", Odometry, rear_rtk_callback)
+    # rospy.Subscriber("/objects/capture_vehicle/front/gps/rtkfix", Odometry, front_rtk_callback)
     rospy.Subscriber("interpolated_detections", ObstacleList, obstacle_callback)
     rospy.on_shutdown(write_tracklets_xml)
     # rospy.on_shutdown(hack_callback)

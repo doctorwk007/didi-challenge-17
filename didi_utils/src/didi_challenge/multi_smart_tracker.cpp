@@ -37,14 +37,26 @@ void MultiSmartTracker::addTracker(const cv::Mat &image, perception_msgs::Obstac
 
 perception_msgs::ObstacleList MultiSmartTracker::get_obstacle_list(const cv::Mat &frame, double cell_size, int grid_dim){
     perception_msgs::ObstacleList obs_list;
+    std::cout << "List size: " << trackers_.size() << std::endl;
     for (int i = 0; i < trackers_.size(); ++i){
-        if(trackers_[i].is_active()){
-            perception_msgs::Obstacle obs = trackers_[i].get_obstacle(frame, cell_size, grid_dim);
-            if(fabs(obs.location.x)>3.5 && fabs(obs.location.y)>1.5){ //Ego-car: width 1.86, height 4.93
-                if(obs.location.z>0.3 ) obs_list.obstacles.push_back(obs); // TODO Adjust threshold. Previously: 0.5
-            }
+//        if(trackers_[i].is_active()){
+//            perception_msgs::Obstacle obs = trackers_[i].get_obstacle(frame, cell_size, grid_dim);
+////            if(fabs(obs.location.x)>3.5 && fabs(obs.location.y)>1.5){ //Ego-car: width 1.86, height 4.93
+////                if(obs.location.z>0.3 ) obs_list.obstacles.push_back(obs); // TODO Adjust threshold. Previously: 0.5
+////            }
+//
+//            obs_list.obstacles.push_back(obs);
+//        }
+
+        // Now inactive agents are also sent
+        perception_msgs::Obstacle obs = trackers_[i].get_obstacle(frame, cell_size, grid_dim);
+        if(!trackers_[i].is_active()){
+            obs.occluded = 1;
         }
+        obs_list.obstacles.push_back(obs);
     }
+
+    std::cout << "Published list size: " << obs_list.obstacles.size() << std::endl;
     return obs_list;
 }
 
@@ -55,7 +67,7 @@ void MultiSmartTracker::update_prediction(cv::Mat frame, const perception_msgs::
         if(!success) to_remove.push_back(i);
     }
     for (int i = 0; i < to_remove.size(); ++i){
-        // removeTracker(to_remove[i]);
+         removeTracker(to_remove[i]);
     }
 
     // Update tracked objects with the new detection and add new ones
@@ -97,6 +109,11 @@ void MultiSmartTracker::update_prediction(cv::Mat frame, const perception_msgs::
 
                 cv::Point2d obs_center(bb.x + bb.width/2, bb.y + bb.height/2);
 
+                double tocenterx = obs_center.x - 350;
+                double tocentery = obs_center.y - 350;
+                double distance_center = sqrt(tocenterx*tocenterx + tocentery*tocentery);
+                if(distance_center * 0.1 < 1.5 ) continue;
+
                 double dx = tracked_center.x - obs_center.x;
                 double dy = tracked_center.y - obs_center.y;
                 double current_distance = sqrt(dx*dx + dy*dy);
@@ -125,10 +142,36 @@ void MultiSmartTracker::update_prediction(cv::Mat frame, const perception_msgs::
     }
 
     // Detections not assigned to trackers become new Agents
-    for (std::map<int,bool>::iterator it=detection_map.begin(); it!=detection_map.end(); ++it){
+    for (std::map<int,bool>::iterator it_d=detection_map.begin(); it_d!=detection_map.end(); ++it_d){
         // TODO Remove threshold. Tracker will not be not active but should be added
-        if(detection_map[it->first] && obs_msg->obstacles[it->first].score > 0.9){
-            addTracker(frame, obs_msg->obstacles[it->first]);
+        if(detection_map[it_d->first] && obs_msg->obstacles[it_d->first].score > 0.9){
+            // Check if detection overlaps with existing agents. If so, ignore them
+            // Get detection center
+            cv::Rect2d bb(obs_msg->obstacles[it_d->first].bbox.x_offset, obs_msg->obstacles[it_d->first].bbox.y_offset,
+                obs_msg->obstacles[it_d->first].bbox.width, obs_msg->obstacles[it_d->first].bbox.height);
+            cv::Point2d obs_center(bb.x + bb.width/2, bb.y + bb.height/2);
+
+
+            bool should_add = true;
+            // TODO REMOVE
+            double tocenterx = obs_center.x - 350;
+            double tocentery = obs_center.y - 350;
+            double distance_center = sqrt(tocenterx*tocenterx + tocentery*tocentery);
+            if(distance_center * 0.1 < 1.5 ) should_add = false;
+
+            for (std::map<int,bool>::iterator it=tracker_map.begin(); should_add && it!=tracker_map.end(); ++it){
+                // Get agent center
+                cv::Point2d tracked_center;
+                tracked_center.x = trackers_[it->first].get_roi().x + trackers_[it->first].get_roi().width/2;
+                tracked_center.y = trackers_[it->first].get_roi().y + trackers_[it->first].get_roi().height/2;
+
+                // Compute centers distance
+                double dx = tracked_center.x - obs_center.x;
+                double dy = tracked_center.y - obs_center.y;
+                double current_distance = sqrt(dx*dx + dy*dy);
+                if(current_distance * 0.05 < 2.5 ) should_add = false;
+            }
+            if(should_add) addTracker(frame, obs_msg->obstacles[it_d->first]);
         }
     }
 
