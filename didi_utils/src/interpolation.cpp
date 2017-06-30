@@ -4,6 +4,7 @@
 
 
 #include <iostream>
+#include <list>
 #include <vector>
 #include <cmath>
 
@@ -21,7 +22,9 @@ ros::Publisher interpolated_pub,marker_pub;
 
 bool online,marker_visualization;
 perception_msgs::ObstacleList last_detected;
-perception_msgs::ObstacleList poses_to_yaw;
+int yaw_interval = 5;
+int yaw_counter = 0;
+list<perception_msgs::ObstacleList> poses_to_yaw;
 vector<int> matched_indices;
 
 //array of interpolation coefficients
@@ -174,7 +177,7 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
 
 
                     if(online==false){
-                        std::cout << std::setprecision(14)<<" interpolating from Time: "<<last_detected.header.stamp.toSec()<<" X "<<last_detected.obstacles[j].location.x<<" Y "<<last_detected.obstacles[j].location.y<<" Alpha "<<last_detected.obstacles[j].alpha<<" Height "<<last_detected.obstacles[j].height<<"\n";
+                        //std::cout << std::setprecision(14)<<" interpolating from Time: "<<last_detected.header.stamp.toSec()<<" X "<<last_detected.obstacles[j].location.x<<" Y "<<last_detected.obstacles[j].location.y<<" Alpha "<<last_detected.obstacles[j].alpha<<" Height "<<last_detected.obstacles[j].height<<"\n";
                         //std::cout <<" timestamps between: "<<useful_timestamps.size()<<endl;
 
 
@@ -195,44 +198,108 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                         //temp.yaw=a[5]*useful_timestamps[k].toSec()+b[5];
 
                         static Eigen::Vector3d front_direction(1.0,0.0,0.0);
-                        Eigen::Vector3d car_vector(temp.location.x-poses_to_yaw.obstacles[j].location.x,temp.location.y-poses_to_yaw.obstacles[j].location.y,0);
-                        double yaw=angle_between(car_vector,front_direction);
+                        vector<double> last_yaws;
+                        double accumulated_yaw = 0.;
+                        for(auto pose : poses_to_yaw){
+                            Eigen::Vector3d car_vector(temp.location.x-poses_to_yaw.front().obstacles[j].location.x,temp.location.y-poses_to_yaw.front().obstacles[j].location.y,0);
+                            double yaw=angle_between(car_vector,front_direction);
+                            last_yaws.push_back(yaw);
+                            accumulated_yaw+=yaw;
+
+                        }
+                        std::sort(last_yaws.begin(), last_yaws.end());
+//                        double yaw = last_yaws[last_yaws.size()/2];
+                        double yaw= (poses_to_yaw.size() == 0 ? 0 : accumulated_yaw/poses_to_yaw.size());
+                        // VERSION 3RD LAST MSG
+//                        Eigen::Vector3d car_vector(temp.location.x-poses_to_yaw.front().obstacles[j].location.x,temp.location.y-poses_to_yaw.front().obstacles[j].location.y,0);
+//                        double yaw=angle_between(car_vector,front_direction);
 
                         //TODO make some kind of mean between the stimated from the birdview and the one from the vectors, give weigths to the distance
                         temp.alpha=yaw;
                         temp.yaw=yaw;
 
-                        double height,width,length;
-                        height=last_detected.obstacles[j].height;
+                        if(temp.kind_name=="Car"){
 
-                        //length and width may be interchanged depending on the yaw angle
-                        if((0<abs(yaw)<M_PI/4)||3*M_PI/4<abs(yaw)<M_PI){
+                            double height,width,length;
+                            double height_diff = 0,length_diff = 0;
+                            height=last_detected.obstacles[j].height;
 
-                            length=last_detected.obstacles[j].length;
-                            width=last_detected.obstacles[j].width;
+                            //length and width may be interchanged depending on the yaw angle
+                            if((0<abs(yaw)<M_PI/4)||3*M_PI/4<abs(yaw)<M_PI){
+
+                                length=last_detected.obstacles[j].length;
+                                width=last_detected.obstacles[j].width;
+                            }
+
+                            else{
+                                width=last_detected.obstacles[j].length;
+                                length=last_detected.obstacles[j].width;
+                            }
+
+                            //oriented length and width stimation
+                            width=1.85;
+
+                            //double stimated_length=(width-1.7*cos(temp.alpha))/sin(temp.alpha);
+                            double stimated_length=length-abs(width*sin(temp.yaw));
+                            cout<<"ORIGINAL WIDTH:"<<width<<endl;
+                            cout<<"ORIGINAL LENGTH: "<<length<<endl;
+                            cout<<"STIMATED LENGTH: "<<stimated_length<<endl;
+
+                            temp.width=width; // TODO esto esta a pelo
+                            length=stimated_length;
+
+
+                            //puth thresholds in the dimensions and get increment
+                            if(height<min_height) {
+                                height_diff=(min_height-height)/2;
+                                height=min_height;
+                            }
+                            else if(height>max_height) {
+                                height_diff=(max_height-height)/2;
+                                height=max_height;
+                            }
+                            if(length<min_length) {
+                                length_diff=(min_length-length)/2;
+                                length=min_length;
+                            }
+
+                            else if(length>max_length){
+                                length_diff=(max_length-length)/2;
+                                length=max_length;
+                            }
+                            // Update size values
+                            temp.length=length;
+                            temp.height=height;
+
+
+                            ///pose increment in x and y
+                            ///y=-length_diff*cos yaw-width_diff*sin yaw
+                            /// x=-length_diff*sin yaw+width_diff*cos yaw
+                            ///
+                            double x_inc=length_diff*cos(temp.yaw);
+                            double y_inc=length_diff*sin(temp.yaw);
+                            cout << "Yaw " << temp.yaw << " Length diff " << length_diff << " cos " << cos(temp.yaw) << endl;
+                            cout<<"initial pose x and y:"<<temp.location.x<<" "<<temp.location.y<<" increments in x and y: "<< x_inc<<" "<< y_inc;
+
+                            temp.location.x+=x_inc;
+                            temp.location.y+=y_inc;
+                            temp.location.z=temp.height/2.-1.72;
+
+                        }else if(temp.kind_name=="Pedestrian"){
+                            temp.height=1.72;
+                            temp.location.z=temp.height/2.-1.72;
                         }
 
-                        else{
-                            width=last_detected.obstacles[j].length;
-                            length=last_detected.obstacles[j].width;
-                        }
 
-                        //puth thresholds in the dimensions
-                        if(height<min_height) height=min_height;
-                        else if(height>max_height) height=max_height;
 
-                        if(width<min_width) width=min_width;
-                        else if(width>max_width) width=max_width;
 
-                        if(length<min_length) length=min_length;
-                        else if(length>max_length) length=max_length;
 
                         //TODO change the point position in function of the dimensions change and in function of the yaw angle
 
 
-
-                        poses_to_yaw.obstacles[j].location.x=temp.location.x;
-                        poses_to_yaw.obstacles[j].location.y=temp.location.y;
+                        // TODO Comment cause found no purpose for doing it
+//                        poses_to_yaw.obstacles[j].location.x=temp.location.x;
+//                        poses_to_yaw.obstacles[j].location.y=temp.location.y;
 
                         interpolated.obstacles.push_back(temp);
 
@@ -256,10 +323,10 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
 
                         //cout<<setprecision(14)<<ros::Time::now()<<endl;
 
-                        std::cout << std::setprecision(14)<<" Interpolation Time: "<<temp.header.stamp.toSec()<<" X "<<temp.location.x<<" Y "<<temp.location.y<<" alpha "<<temp.alpha<<" height "<<temp.height<< "Yaw: "<<temp.yaw<<"\n";
+                       //std::cout << std::setprecision(14)<<" Interpolation Time: "<<temp.header.stamp.toSec()<<" X "<<temp.location.x<<" Y "<<temp.location.y<<" alpha "<<temp.alpha<<" height "<<temp.height<< "Yaw: "<<temp.yaw<<"\n";
 
 
-                        std::cout << std::setprecision(14)<<" to Time: "<<msg->header.stamp.toSec()<<" X "<<msg->obstacles[i].location.x<<" Y "<<msg->obstacles[i].location.y<<" alpha "<<msg->obstacles[i].alpha<<" height "<<msg->obstacles[i].height<<"\n\n";
+                        //std::cout << std::setprecision(14)<<" to Time: "<<msg->header.stamp.toSec()<<" X "<<msg->obstacles[i].location.x<<" Y "<<msg->obstacles[i].location.y<<" alpha "<<msg->obstacles[i].alpha<<" height "<<msg->obstacles[i].height<<"\n\n";
                     }
 
 
@@ -304,10 +371,11 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
     //camera_timestamps.clear();
 
     //std::cout <<"publishing "<<interpolated.obstacles.size()<<"..\n\n\n";
-    poses_to_yaw=*msg;
-
-
-
+    poses_to_yaw.push_back(*msg);
+    if(yaw_counter>=yaw_interval){
+        poses_to_yaw.pop_front();
+    }
+    yaw_counter++;
 }
 
 

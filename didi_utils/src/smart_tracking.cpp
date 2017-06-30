@@ -13,7 +13,8 @@
 #include <perception_msgs/ObstacleList.h>
 #include <sensor_msgs/Image.h>
 #include <didi_challenge/multi_smart_tracker.hpp>
-
+#include <radar_driver/RadarTracks.h>
+#include <radar_driver/Track.h>
 using namespace std;
 
 ros::Publisher obst_list_pub_;
@@ -48,6 +49,11 @@ void detection_callback(const sensor_msgs::Image::ConstPtr& img_msg, const perce
     }
 }
 
+void radar_callback(const radar_driver::RadarTracks::ConstPtr& radar_msg){
+    for(auto track : radar_msg->tracks){
+        cout << ""
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -93,6 +99,10 @@ int main(int argc, char **argv)
 
     message_filters::TimeSynchronizer<sensor_msgs::Image, perception_msgs::ObstacleList> sync(image_sub, detection_sub, 10);
     sync.registerCallback(boost::bind(&detection_callback, _1, _2));
+
+    // RADAR STUFF
+    ros::Subscriber radar_sub;
+    radar_sub=public_nh.subscribe("/radar/tracks",10,radar_callback);
 
     ros::Rate rate(10.0);
     while(ros::ok())
