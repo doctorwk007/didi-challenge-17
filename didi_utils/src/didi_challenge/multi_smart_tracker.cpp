@@ -66,8 +66,8 @@ void MultiSmartTracker::update_prediction(cv::Mat frame, const perception_msgs::
         bool success = trackers_[i].predict(frame);
         if(!success) to_remove.push_back(i);
     }
-    for (int i = 0; i < to_remove.size(); ++i){
-         removeTracker(to_remove[i]);
+    for (int i = 0; i < to_remove.size(); ++i){ //TODO EXECUTE ONLY FOR VEHICLES
+//         removeTracker(to_remove[i]);
     }
 
     // Update tracked objects with the new detection and add new ones

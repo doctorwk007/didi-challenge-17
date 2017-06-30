@@ -14,7 +14,6 @@ const cv::Scalar BLUE(255,0,0);
 const cv::Scalar GREEN(0, 255,0);
 const cv::Scalar RED(0,0,255);
 const cv::Scalar PURPLE(128,0,128);
-const std::string DRAW_WINDOW = "Detections";
 
 class MultiSmartTracker
 {

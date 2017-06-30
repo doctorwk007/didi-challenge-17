@@ -51,7 +51,7 @@ void detection_callback(const sensor_msgs::Image::ConstPtr& img_msg, const perce
 
 void radar_callback(const radar_driver::RadarTracks::ConstPtr& radar_msg){
     for(auto track : radar_msg->tracks){
-        cout << ""
+//        cout << "Track"
     }
 }
 
@@ -88,9 +88,6 @@ int main(int argc, char **argv)
     // Init the MultiTracker pointer
     tracker = unique_ptr<MultiSmartTracker>(new MultiSmartTracker(tracking_algorithm, score_threshold, distance_threshold, max_missings, min_detections));
 
-    // Debug window
-    cv::namedWindow(DRAW_WINDOW);
-
     // Init the synchronized subscribers
     message_filters::Subscriber<sensor_msgs::Image> image_sub;
     image_sub.subscribe(public_nh, image_topic, 10);
@@ -102,7 +99,7 @@ int main(int argc, char **argv)
 
     // RADAR STUFF
     ros::Subscriber radar_sub;
-    radar_sub=public_nh.subscribe("/radar/tracks",10,radar_callback);
+    radar_sub=public_nh.subscribe("/radar/tracks", 10, radar_callback);
 
     ros::Rate rate(10.0);
     while(ros::ok())
