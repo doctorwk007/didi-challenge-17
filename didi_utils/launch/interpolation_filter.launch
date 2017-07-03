@@ -1,0 +1,38 @@
+<launch>
+
+
+    <arg name="detection_sub_topic" default="/refined_detection" />
+    <arg name="camera_sub_topic" default="image_raw" />
+    <arg name="markers_pub_topic" default="markers" />
+    <arg name="interpolated_pub_topic" default="interpolated_detections" />
+
+    <arg name="online" default="false"/>
+    <arg name="marker_visualization" default="true"/>
+
+
+    <arg name="height_max" default="1.65"/>
+    <arg name="height_min" default="1.40"/>
+    <arg name="length_max" default="4.52"/>
+    <arg name="length_min" default="4.26"/>
+    <arg name="width_max" default="1.8"/>
+    <arg name="width_min" default="1.67"/>
+
+
+
+    <node pkg="didi_challenge" type="interpolation" name="interpolation" output="screen">
+        <param name="detection_sub_topic" value="$(arg detection_sub_topic)"/>
+        <param name="camera_sub_topic" value="$(arg camera_sub_topic)"/>
+        <param name="markers_pub_topic" value="$(arg markers_pub_topic)"/>
+        <param name="interpolated_pub_topic" value="$(arg interpolated_pub_topic)"/>
+        <param name="online" value="$(arg online)"/>
+        <param name="marker_visualization" value="$(arg marker_visualization)"/>
+
+        <param name="height_max" value="$(arg height_max)"/>
+        <param name="height_min" value="$(arg height_min)"/>
+        <param name="length_max" value="$(arg length_max)"/>
+        <param name="length_min" value="$(arg length_min)"/>
+        <param name="width_max" value="$(arg width_max)"/>
+        <param name="width_min" value="$(arg width_min)"/>
+    </node>
+
+</launch>

@@ -105,6 +105,8 @@ add_executable(interpolation src/interpolation.cpp)
 
 add_executable(smart_tracking src/smart_tracking.cpp)
 
+add_executable(refinement src/refinement.cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -126,6 +128,11 @@ target_link_libraries(laser_birdview
 
 target_link_libraries(interpolation
   ${catkin_LIBRARIES}
+)
+
+target_link_libraries(refinement
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
 )
 
 target_link_libraries(smart_tracking

@@ -34,7 +34,9 @@
     </node>
   </group>
 
+  <node pkg="didi_challenge" type="refinement" name="refinement" output="$(arg stdout)" required="true"/>
+
   <include file="$(find didi_challenge)/launch/smart_tracker.launch" />
-  <include file="$(find didi_challenge)/launch/interpolation.launch" />
+  <include file="$(find didi_challenge)/launch/interpolation_filter.launch" />
   <include file="$(find didi_challenge)/launch/tracklet_gen.launch" />
 </launch>

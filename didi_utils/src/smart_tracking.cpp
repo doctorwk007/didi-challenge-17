@@ -125,10 +125,10 @@ int main(int argc, char **argv)
 
     // Init the synchronized subscribers
     message_filters::Subscriber<sensor_msgs::Image> image_sub;
-    image_sub.subscribe(public_nh, image_topic, 1);
+    image_sub.subscribe(public_nh, image_topic, 1000);
     message_filters::Subscriber<perception_msgs::ObstacleList> detection_sub;
-    detection_sub.subscribe(public_nh, obstacles_topic, 11);
-    message_filters::Subscriber<sensor_msgs::PointCloud2> radar_sub(public_nh, "/radar/points", 1);
+    detection_sub.subscribe(public_nh, obstacles_topic, 1000);
+    message_filters::Subscriber<sensor_msgs::PointCloud2> radar_sub(public_nh, "/radar/points", 1000); 
 
 
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, perception_msgs::ObstacleList, sensor_msgs::PointCloud2> MySyncPolicy;
