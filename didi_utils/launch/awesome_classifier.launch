@@ -8,10 +8,7 @@
   <param name="/birdview/grid_dim" value="70" />
   <param name="/birdview/cell_size" value="0.1" />
 
-  <include file="$(find didi_challenge)/launch/laser_birdview.launch">
-    <arg name="grid_dim" value="70" />
-    <arg name="cell_size" value="0.1" />
-  </include>
+  <include file="$(find didi_challenge)/launch/laser_birdview_car.launch"/>
 
   <!-- OBJECT DETECTION BRANCH -->
   <group ns="cnn">

@@ -195,13 +195,14 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                         temp.location.z=a[2]*useful_timestamps[k].toSec()+b[2]-1.72;
                         //temp.alpha=a[3]*useful_timestamps[k].toSec()+b[3];
                         temp.height=a[4]*useful_timestamps[k].toSec()+b[4];
-                        //temp.yaw=a[5]*useful_timestamps[k].toSec()+b[5];
+                        temp.yaw=a[5]*useful_timestamps[k].toSec()+b[5];
 
                         static Eigen::Vector3d front_direction(1.0,0.0,0.0);
                         vector<double> last_yaws;
                         double accumulated_yaw = 0.;
                         for(auto pose : poses_to_yaw){
-                            Eigen::Vector3d car_vector(temp.location.x-poses_to_yaw.front().obstacles[j].location.x,temp.location.y-poses_to_yaw.front().obstacles[j].location.y,0);
+//                          Eigen::Vector3d car_vector(temp.location.x-poses_to_yaw.front().obstacles[j].location.x,temp.location.y-poses_to_yaw.front().obstacles[j].location.y,0);
+                            Eigen::Vector3d car_vector(temp.location.x-pose.obstacles[j].location.x,temp.location.y-pose.obstacles[j].location.y,0); // TODO CHECK
                             double yaw=angle_between(car_vector,front_direction);
                             last_yaws.push_back(yaw);
                             accumulated_yaw+=yaw;
@@ -215,8 +216,8 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
 //                        double yaw=angle_between(car_vector,front_direction);
 
                         //TODO make some kind of mean between the stimated from the birdview and the one from the vectors, give weigths to the distance
-                        temp.alpha=yaw;
-                        temp.yaw=yaw;
+//                        temp.alpha=yaw;
+//                        temp.yaw=yaw;
 
                         if(temp.kind_name=="Car"){
 
@@ -245,17 +246,17 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                             cout<<"ORIGINAL LENGTH: "<<length<<endl;
                             cout<<"STIMATED LENGTH: "<<stimated_length<<endl;
 
-                            temp.width=width; // TODO esto esta a pelo
+//                            temp.width=width; // TODO esto esta a pelo
                             length=stimated_length;
 
 
                             //puth thresholds in the dimensions and get increment
                             if(height<min_height) {
-                                height_diff=(min_height-height)/2;
+//                                height_diff=(min_height-height)/2;
                                 height=min_height;
                             }
                             else if(height>max_height) {
-                                height_diff=(max_height-height)/2;
+//                                height_diff=(max_height-height)/2;
                                 height=max_height;
                             }
                             if(length<min_length) {
@@ -268,7 +269,7 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                                 length=max_length;
                             }
                             // Update size values
-                            temp.length=length;
+//                            temp.length=length;
                             temp.height=height;
 
 
@@ -281,8 +282,8 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                             cout << "Yaw " << temp.yaw << " Length diff " << length_diff << " cos " << cos(temp.yaw) << endl;
                             cout<<"initial pose x and y:"<<temp.location.x<<" "<<temp.location.y<<" increments in x and y: "<< x_inc<<" "<< y_inc;
 
-                            temp.location.x+=x_inc;
-                            temp.location.y+=y_inc;
+//                            temp.location.x+=x_inc;
+//                            temp.location.y+=y_inc;
                             temp.location.z=temp.height/2.-1.72;
 
                         }else if(temp.kind_name=="Pedestrian"){
@@ -345,7 +346,7 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
             }
             cout<<"_ _ _ _ _ \n";
 
-            if(online==false){
+            if(online==false && interpolated.obstacles.size() > 0){
                 //what timestamp should this have? the individual obstacles have the camera one
                 interpolated.header.stamp=useful_timestamps[k];
                 interpolated_pub.publish(interpolated);

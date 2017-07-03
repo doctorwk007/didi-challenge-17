@@ -10,6 +10,10 @@
 #include <opencv2/tracking.hpp>
 #include <iostream>
 
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/common/transforms.h>
+#include <pcl_ros/transforms.h>
+
 const cv::Scalar BLUE(255,0,0);
 const cv::Scalar GREEN(0, 255,0);
 const cv::Scalar RED(0,0,255);
@@ -18,10 +22,10 @@ const cv::Scalar PURPLE(128,0,128);
 class MultiSmartTracker
 {
 public:
-    MultiSmartTracker(std::string algorithm, double score_threshold,
-        double distance_threshold, int max_missings, int min_detections);
+    MultiSmartTracker(std::string algorithm, double cell_size, int grid_dim,
+        double score_threshold, double distance_threshold, int max_missings, int min_detections);
     ~MultiSmartTracker();
-    void update_prediction(cv::Mat frame, const perception_msgs::ObstacleList::ConstPtr& obs_msg);
+    void update_prediction(cv::Mat frame, const perception_msgs::ObstacleList::ConstPtr& obs_msg, pcl::PointCloud<pcl::PointXYZ>::Ptr radar_cloud);
     void draw_detections(cv::Mat& image);
     void removeTracker(int position);
     void addTracker(const cv::Mat &image, perception_msgs::Obstacle obs_msg);
@@ -32,6 +36,9 @@ public:
 private:
     std::string algorithm_; // Tracking algorithm
     int lastID_;
+
+    double cell_size_;
+    double grid_dim_;
 
     double score_threshold_;
     double distance_threshold_;

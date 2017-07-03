@@ -5,18 +5,21 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <iostream>
+#include <pcl/point_types.h>
+#include <Eigen/Core>
 
-
+using namespace std;
 class SmartTracker
 {
 public:
     SmartTracker(std::string tracking_algorithm);
-    SmartTracker(std::string tracking_algorithm, cv::Mat init_frame, perception_msgs::Obstacle init_object, double perfect_score);
+    SmartTracker(std::string tracking_algorithm, cv::Mat init_frame, perception_msgs::Obstacle init_object, double min_detections, int max_missings);
     ~SmartTracker();
 
     void init(cv::Mat init_frame, perception_msgs::Obstacle init_object);
     bool predict(cv::Mat& new_frame);
     void update_roi(perception_msgs::Obstacle new_detection);
+    void update_with_radar(pcl::PointXYZ new_detection);
     void setid(int id) {obs_.id = id;}
     void set_missing(); // Increase missing counter by 1
 
@@ -37,6 +40,7 @@ private:
     int num_detected_;
     int num_missings_;
     int min_detections_;
+    int max_missings_;
     double perfect_score_;
     double tracking_score_;
 

@@ -1,0 +1,77 @@
+<launch>
+
+    <arg name="output_topic" default="filtered_cloud" />
+
+    <!-- Put kitti or didi, to compute intensity in different way -->
+    <arg name="car" default="didi" />
+
+      <param name="/birdview/grid_dim" value="70" />
+      <param name="/birdview/cell_size" value="0.1" />
+
+    <!--KITTI topics and frames-->
+    <!--arg name="cloud_topic" default="kitti/velo/pointcloud" />
+    <arg name="velodyne_tf_frame" default="/velo_link" />
+    <arg name="camera_tf_frame" default="/camera_color_left" />--> <!-- Only for KITTI -->
+
+    <!--Didi topics and frames-->
+    <arg name="cloud_topic" default="velodyne_points" />
+    <arg name="velodyne_tf_frame" default="/velodyne" />
+    <arg name="camera_tf_frame" default="/camera" />
+    <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" />
+    <include file="$(find didi_challenge)/launch/tf.launch" />
+
+    <!-- MAP CONFIGURATION -->
+    <arg name="camera_fov" default="100.0" />
+    <arg name="intensity_threshold" default="0.05" />
+    <arg name="cell_size" default="0.1" />
+    <arg name="cell_size_height_map" default="0.5" /> <!--0.5-->
+    <arg name="max_height" default="3.0" />
+    <arg name="grid_dim" default="70" />
+    <arg name="grid_dim_height_map" default="300" />
+
+    <arg name="rotated_horizontal_fov" default="90" />
+
+
+    <!-- OPERATING MODE -->
+    <arg name="rosbag_name" default="/media/datasets/didi-challenge/kitti_2011_09_26_drive_0001_sync.bag" /> <!-- REQUIRED IF NOT ONLINE -->
+    <arg name="is_online" default="true" />
+    <arg name="write_imgs" default="true" />
+    <arg name="generate_rotated" default="true" />
+
+    <!-- HDL-64E
+    <arg name="planes" default="64" />
+    <arg name="h_res" default="0.00305" />
+    <arg name="v_res" default="0.4" />
+    <arg name="low_opening" default="24.9" />-->
+
+    <!-- HDL-32E-->
+    <arg name="planes" default="30" />
+    <arg name="h_res" default="0.0034906" />
+    <arg name="v_res" default="1.33" />
+    <arg name="low_opening" default="30.9" />
+
+    <node pkg="didi_challenge" type="laser_birdview" name="laser_birdview" output="screen">
+        <param name="cloud_topic" value="$(arg cloud_topic)"/>
+        <param name="output_topic" value="$(arg output_topic)"/>
+        <param name="velodyne_tf_frame" value="$(arg velodyne_tf_frame)"/>
+        <param name="camera_tf_frame" value="$(arg camera_tf_frame)"/>
+        <param name="camera_fov" value="$(arg camera_fov)"/>
+        <param name="intensity_threshold" value="$(arg intensity_threshold)"/>
+        <param name="cell_size" value="$(arg cell_size)"/>
+        <param name="cell_size_height_map" value="$(arg cell_size_height_map)"/>
+        <param name="max_height" value="$(arg max_height)"/>
+        <param name="grid_dim" value="$(arg grid_dim)"/>
+        <param name="grid_dim_height_map" value="$(arg grid_dim_height_map)"/>
+        <param name="planes" value="$(arg planes)"/>
+        <param name="h_res" value="$(arg h_res)"/>
+        <param name="v_res" value="$(arg v_res)"/>
+        <param name="low_opening" value="$(arg low_opening)"/>
+        <param name="rosbag_name" value="$(arg rosbag_name)"/>
+        <param name="is_online" value="$(arg is_online)"/>
+        <param name="write_imgs" value="$(arg write_imgs)"/>
+        <param name="car" value="$(arg car)"/>
+        <param name="generate_rotated" value="$(arg generate_rotated)"/>
+        <param name="rotated_horizontal_fov" value="$(arg rotated_horizontal_fov)"/>
+    </node>
+
+</launch>
