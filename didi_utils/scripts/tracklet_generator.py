@@ -22,6 +22,7 @@ collection = TrackletCollection()
 last_frame = -1
 aux_poses = []
 aux_frames = []
+id_remap = []
 
 camera_cols = ["timestamp"]
 camera_dict = defaultdict(list)
@@ -165,10 +166,12 @@ def obstacle_callback(obstacle_list):
     global collection
     global last_frame
     camera_frame = frames[str(obstacle_list.header.stamp.to_nsec())[:-6]]
+    hole = False
     if (camera_frame-last_frame) != 1:
-        print ('Hole of %d detected' % (camera_frame-last_frame))
-    print ('Detection at frame %d' % current_frame)
-    print ('received at %d' % camera_frame)
+        hole = True
+        # print ('\nHole of %d detected\n' % (camera_frame-last_frame))
+    # print ('Detection at frame %d' % current_frame)
+    # print ('received at %d' % camera_frame)
     for obstacle in obstacle_list.obstacles:
         pose = {}
         pose['tx'] = obstacle.location.x
@@ -178,41 +181,53 @@ def obstacle_callback(obstacle_list):
         pose['ry'] = 0
         pose['rz'] = obstacle.alpha  # TODO CHANGE to obstacle.yaw
 
-        while len(aux_poses) <= obstacle.id:  # Loop to add aux poses for every agent
+        while len(id_remap) <= obstacle.id:  # Loop to add aux poses for every agent
+            id_remap.append([])
+
+        if type(id_remap[obstacle.id]) is list:  # First time
+            id_remap[obstacle.id] = obstacle.id
+            hole = False
+
+        if hole:
+            id_remap[obstacle.id] += 100
+            # print obstacle.id, ' remapped to ', id_remap[obstacle.id]
+
+        # Use remapped ID
+        current_id = id_remap[obstacle.id]
+
+        while len(aux_poses) <= current_id:  # Loop to add aux poses for every agent
             aux_poses.append([])
             aux_frames.append([])
 
-        while len(collection.tracklets) <= obstacle.id:  # Loop to add tracker elements for every agent
+        while len(collection.tracklets) <= current_id:  # Loop to add tracker elements for every agent
             collection.tracklets.append([])
 
         if obstacle.occluded:  # Store inactive agents poses in auxiliary list
-            aux_poses[obstacle.id].append(pose)
-            aux_frames[obstacle.id].append(camera_frame)
-            print ('New inactive pose for ID %d' % obstacle.id)
+            aux_poses[current_id].append(pose)
+            aux_frames[current_id].append(camera_frame)
+            # print ('New inactive pose for ID %d' % obstacle.id)
 
         else:
-            # try:
-            # Store new pose
-            print ('New pose received for ID %d' % obstacle.id)
+            # print ('New pose received for ID %d' % obstacle.id)
             #collection.tracklets[obstacle.id].poses.append(pose)
-            aux_poses[obstacle.id].append(pose)
-            aux_frames[obstacle.id].append(camera_frame)
+            aux_poses[current_id].append(pose)
+            aux_frames[current_id].append(camera_frame)
 
-            if type(collection.tracklets[obstacle.id]) is list:
+            if type(collection.tracklets[current_id]) is list:
                 obs_tracklet = Tracklet(
                     object_type=obstacle.kind_name, l=obstacle.length, w=obstacle.width,
-                    h=obstacle.height, first_frame=aux_frames[obstacle.id][0])
+                    h=obstacle.height, first_frame=aux_frames[current_id][0])
                 # collection.tracklets.insert(camera_frame, obs_tracklet)
-                collection.tracklets[obstacle.id] = obs_tracklet
+                collection.tracklets[current_id] = obs_tracklet
 
             # except IndexError:
             #     print ('Obstacle with ID %d', obstacle.id, ' appended to list')
             #     obs_tracklet.poses.append(pose)
             # If there are poses in auxiliary list, append them before new active pose is inserted
-            # if len(aux_poses) > obstacle.id and len(aux_poses[obstacle.id]) > 0:
-            for p in aux_poses[obstacle.id]:
-                collection.tracklets[obstacle.id].poses.append(p)
-            del(aux_poses[obstacle.id][:])  # Remove all stored poses for current agent
+            # if len(aux_poses) > obstacle.id and len(aux_poses[current_id]) > 0:
+            for p in aux_poses[current_id]:
+                collection.tracklets[current_id].poses.append(p)
+            del(aux_poses[current_id][:])  # Remove all stored poses for current agent
 
     # end of obstacle loop
     last_frame = camera_frame
