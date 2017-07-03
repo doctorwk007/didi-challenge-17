@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
         bird_view_pub = it.advertise("bird_view", 1);
         cloud_pub = public_nh.advertise<pcl::PointCloud<pcl::PointXYZI>>(output_topic, 1);
         clusters_pub = public_nh.advertise<pcl::PointCloud<pcl::PointXYZI>>("clusters_output", 1);
-        ros::Subscriber cloud_sub = public_nh.subscribe(cloud_topic, 1, cloud_callback);
+        ros::Subscriber cloud_sub = public_nh.subscribe(cloud_topic, 1000, cloud_callback);
 
         while (ros::ok())
         {

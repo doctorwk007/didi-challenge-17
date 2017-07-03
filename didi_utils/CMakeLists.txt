@@ -132,6 +132,7 @@ target_link_libraries(interpolation
 
 target_link_libraries(refinement
   ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
 )
 
 target_link_libraries(smart_tracking
