@@ -5,9 +5,13 @@
   <arg name="stdout" default="screen" />
   <arg name="net_name" default="didi2p" />
 
+  <param name="/birdview/grid_dim" value="35" />
+  <param name="/birdview/cell_size" value="0.05" />
+
   <include file="$(find didi_challenge)/launch/laser_birdview.launch">
-    <param name="grid_dim" value="35" />
-    <param name="cell_size" value="0.05" />
+    <!-- <param name="grid_dim" value="35" />
+    <param name="cell_size" value="0.05" /> -->
+    <param name="cell_size_height_map" default="0.25" />
   </include>
 
   <!-- OBJECT DETECTION BRANCH -->
@@ -33,8 +37,8 @@
   </group>
 
   <include file="$(find didi_challenge)/launch/smart_tracker.launch">
-    <param name="grid_dim" value="35" />
-    <param name="cell_size" value="0.05" />
+    <param name="max_missings" value="100" />
+    <param name="min_detections" value="1" />
   </include>
   <include file="$(find didi_challenge)/launch/interpolation.launch" />
   <include file="$(find didi_challenge)/launch/tracklet_gen.launch" />
