@@ -1,12 +1,19 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(perception_msgs)
 find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
+  image_geometry
   message_generation
   std_msgs
   sensor_msgs
   geometry_msgs
   pcl_msgs
+  image_transport
+  pcl_ros
+  roscpp
 )
+
+find_package(OpenCV REQUIRED)
 
 add_message_files(FILES
   Obstacle.msg
@@ -27,6 +34,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -39,4 +47,13 @@ add_dependencies(perception_msgs_lib
                 ${PROJECT_NAME}_gencfg)
 target_link_libraries(perception_msgs_lib
   ${catkin_LIBRARIES}
+)
+
+add_executable(obstaclelist_cuboid_painter src/obstaclelist_cuboid_painter.cpp)
+
+add_dependencies(obstaclelist_cuboid_painter ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg)
+target_link_libraries(obstaclelist_cuboid_painter
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${PCL_LIBRARIES}
 )

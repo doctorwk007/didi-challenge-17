@@ -18,6 +18,7 @@ const cv::Scalar BLUE(255,0,0);
 const cv::Scalar GREEN(0, 255,0);
 const cv::Scalar RED(0,0,255);
 const cv::Scalar PURPLE(128,0,128);
+const cv::Scalar YELLOW(0,255,255);
 
 class MultiSmartTracker
 {
@@ -28,12 +29,22 @@ public:
     void update_prediction(cv::Mat frame, const perception_msgs::ObstacleList::ConstPtr& obs_msg, pcl::PointCloud<pcl::PointXYZ>::Ptr radar_cloud);
     void draw_detections(cv::Mat& image);
     void removeTracker(int position);
-    void addTracker(const cv::Mat &image, perception_msgs::Obstacle obs_msg);
+    void reset(){ trackers_.clear();}
+    int addTracker(const cv::Mat &image, perception_msgs::Obstacle obs_msg);
     perception_msgs::ObstacleList get_obstacle_list(const cv::Mat &frame, double cell_size, int grid_dim);
+
+    void prepare_trackers(){
+        for(auto& tracker : trackers_){
+            tracker.get_ready();
+        }
+    cout << "All trackers ready" << endl;
+    }
 
     std::vector<SmartTracker> trackers_;
     std::vector<cv::Rect2d> detections_;
+    std::vector<cv::Point2d> tracks_;
 private:
+    bool isRadarInROI(cv::Point2d p, cv::Rect2d roi);
     std::string algorithm_; // Tracking algorithm
     int lastID_;
 

@@ -52,6 +52,11 @@ bool SmartTracker::predict(cv::Mat& new_frame)
         obs_.bbox.y_offset = bb.y;
         obs_.bbox.width = bb.width;
         obs_.bbox.height = bb.height;
+
+        x = bb.x;
+        y = bb.y;
+        width = bb.width;
+        height = bb.height;
     }
     return success;
 }
@@ -80,6 +85,12 @@ void SmartTracker::update_roi(perception_msgs::Obstacle new_detection)
     }
     if(tracking_score_>2) tracking_score_ = 2;
 
+
+    // Update backup values
+    x = obs_.bbox.x_offset;
+    y= obs_.bbox.y_offset;
+    width =obs_.bbox.width;
+    height = obs_.bbox.height;
     // if(tracking_score_>10) tracking_score_ = 10;
 
     // // Get max height in ROI and set Z coord to height/2
@@ -96,6 +107,103 @@ void SmartTracker::update_roi(perception_msgs::Obstacle new_detection)
     // Update nonzero variable
     // last_nonzero_ = cv::countNonZero(bgr[0]);
     // std::cout << " nonzero " << last_nonzero_ << std::endl;
+}
+
+bool SmartTracker::isRadarInROI(cv::Point2d p){
+    double cell_size = 0.1; // TODO PARAMETER
+    double pixel_margin = 1.5/cell_size;
+    cv::Rect2d roi = get_roi();
+    if(p.x>roi.x-pixel_margin &&p.x<roi.x+roi.width+pixel_margin &&
+        p.y>roi.y-pixel_margin &&p.y<roi.y+roi.height+pixel_margin){
+        return true;
+     }
+     return false;
+}
+
+void SmartTracker::get_ready(){
+    for(auto& track : tracks_){
+        track.prev_ = track.current_;
+        track.current_.x = -99999;
+        track.current_.y = -99999;
+    }
+}
+
+void SmartTracker::associate_radars(vector<cv::Point2d> v){
+//    cout << "RADAR ASSOCIATION IN PROCESS..." <<endl;
+//    cout << get_roi() << endl;
+    std::map<int,bool> radar_tracks;
+    for (int j = 0; j < v.size(); ++j){
+        radar_tracks[j]=true;
+    }
+
+//    cout << "Agent " << getid() << " has tracks: " << tracks_.size()  << endl;
+    for(auto& track : tracks_){
+        double best_distance = 9999;
+        int best_index = -1;
+        for(int i=0; i< v.size(); i++){
+            double dx = track.prev_.x - v[i].x;
+            double dy = track.prev_.y - v[i].y;
+            double current_distance = sqrt(dx*dx + dy*dy);
+
+            if(current_distance < best_distance){
+                best_distance = current_distance;
+                best_index = i;
+            }
+        }
+        if(radar_tracks[best_index] && best_distance < 25){ // If track not assigned yet
+            radar_tracks[best_index] = false;
+            track.current_.x = v[best_index].x;
+            track.current_.y = v[best_index].y;
+//            cout << "Radar match1!" << endl;
+        }
+    }
+
+    // Add new ones
+    for (std::map<int,bool>::iterator it=radar_tracks.begin(); it!=radar_tracks.end(); ++it){
+        if(!radar_tracks[it->first]) continue;
+        RadarTrack t(v[it->first]);
+        tracks_.push_back(t);
+        cout << "Added radar track to agent " << getid() << endl;
+    }
+
+    for(int i=tracks_.size()-1; i>0; i--){
+        if(tracks_[i].current_.x == -99999){
+            tracks_.erase(tracks_.begin()+i);
+        }
+    }
+
+}
+
+bool SmartTracker::update_from_radar(){
+    bool updated = false;
+    for(auto track : tracks_){
+        if(track.has_prev()){ // Update center
+            cout << "Updated agent " << getid() << "from radar " << endl;
+            double x_inc = (x+width/2) - track.prev_.x;
+            double y_inc = (y+height/2) - track.prev_.y;
+//            cout << "xinc " << x_inc << "yinc " << y_inc << endl;
+            x = track.current_.x + x_inc - width/2;
+            y = track.current_.y + y_inc - height/2;
+            updated = true;
+        }
+    }
+    double x_center =  x + width/2;
+    double y_center =  y + height/2;
+    if(x_center> 0 && x_center< 700 && y_center > 0 && y_center <700){
+        obs_.bbox.x_offset = x;
+        obs_.bbox.y_offset = y;
+    }
+
+    if(updated) {
+        num_detected_++;
+        num_missings_= 0; // Reset counter
+
+    //    cout << "bbox " << obs_.bbox << endl;
+
+        // Detection found, Increase tracking score
+        tracking_score_ *= pow(1+0.95-0.85, num_detected_); // TODO CHECK Score manually set
+    }
+    return updated;
 }
 
 
@@ -164,7 +272,7 @@ void SmartTracker::update_with_radar(pcl::PointXYZ new_detection)
 //        // Update obstacle bbox
 //        obs_.bbox.x_offset = new_tl.x;
 //        obs_.bbox.y_offset = new_tl.y;
-//        obs_.bbox.width = new_br.x-new_tl.x;
+//        width = new_br.x-new_tl.x;
 //        obs_.bbox.height = new_br.y-new_tl.y;
 //        obs_.alpha = yaw;
 //        obs_.yaw = yaw;
@@ -173,7 +281,7 @@ void SmartTracker::update_with_radar(pcl::PointXYZ new_detection)
 //        cout << "Not distance for yaw" << endl;
         obs_.bbox.y_offset = radar2d.y-obs_.bbox.height;
         if(radar2d.x<map_size/2 - 20){
-            obs_.bbox.x_offset = radar2d.x-obs_.bbox.width;
+            obs_.bbox.x_offset = radar2d.x-width;
         }else if (radar2d.x>map_size/2 + 20){
             obs_.bbox.x_offset = radar2d.x;
         }else{
@@ -195,15 +303,15 @@ perception_msgs::Obstacle SmartTracker::get_obstacle(const cv::Mat &frame, doubl
     int map_size = (int) (grid_dim/cell_size);
     // Update location values and return
     cv::Point2d tracked_center;
-    tracked_center.x = obs_.bbox.x_offset + obs_.bbox.width/2;
-    tracked_center.y = obs_.bbox.y_offset + obs_.bbox.height/2;
+    tracked_center.x = x + width/2;
+    tracked_center.y = y + height/2;
 
     // BBox center to real relative coords
     obs_.location.x = -(tracked_center.y-map_size/2)*cell_size;
     obs_.location.y = -(tracked_center.x-map_size/2)*cell_size;
 
     // Get max height in ROI and set Z coord to height/2
-    cv::Rect2d boundingBox(obs_.bbox.x_offset, obs_.bbox.y_offset, obs_.bbox.width, obs_.bbox.height);
+    cv::Rect2d boundingBox(x, y, width, height);
     if(boundingBox.x<0) boundingBox.x = 0;
     if(boundingBox.y<0) boundingBox.y = 0;
     if(boundingBox.x+boundingBox.width>frame.cols) boundingBox.x = frame.cols - boundingBox.width;
@@ -217,12 +325,12 @@ perception_msgs::Obstacle SmartTracker::get_obstacle(const cv::Mat &frame, doubl
     obs_.height =  (maxVal/255)*3.0;
     obs_.location.z = obs_.height/2;
 
-    if(obs_.bbox.width < obs_.bbox.height){
-        obs_.width = obs_.bbox.width * cell_size;
+    if(width < obs_.bbox.height){
+        obs_.width = width * cell_size;
         obs_.length = obs_.bbox.height * cell_size;
     }else{
         obs_.width = obs_.bbox.height * cell_size;
-        obs_.length = obs_.bbox.width * cell_size;
+        obs_.length = width * cell_size;
     }
     return obs_;
 }
@@ -265,6 +373,6 @@ int SmartTracker::get_missings()
 
 cv::Rect2d SmartTracker::get_roi()
 {
-    cv::Rect2d bb(obs_.bbox.x_offset, obs_.bbox.y_offset, obs_.bbox.width, obs_.bbox.height);
+    cv::Rect2d bb(x, y, width, height);
     return bb;
 }

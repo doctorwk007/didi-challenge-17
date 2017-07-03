@@ -86,8 +86,8 @@ void camera_sub_callback(sensor_msgs::ImageConstPtr msg){
 
             //cout<<setprecision(14)<<ros::Time::now()<<endl;
 
-            std::cout << std::setprecision(14)<<" Original Time: "<<last_detected.header.stamp.toSec()<<" X "<<last_detected.obstacles[matched_indices[i]].location.x<<" Y "<<last_detected.obstacles[matched_indices[i]].location.y<<" alpha "<<last_detected.obstacles[matched_indices[i]].alpha<<" height "<<last_detected.obstacles[matched_indices[i]].height<<"\n";
-            std::cout << std::setprecision(14)<<" Extrapolation Time: "<<temp.header.stamp.toSec()<<" X "<<temp.location.x<<" Y "<<temp.location.y<<" alpha "<<temp.alpha<<" height "<<temp.height<<"\n\n";
+//            std::cout << std::setprecision(14)<<" Original Time: "<<last_detected.header.stamp.toSec()<<" X "<<last_detected.obstacles[matched_indices[i]].location.x<<" Y "<<last_detected.obstacles[matched_indices[i]].location.y<<" alpha "<<last_detected.obstacles[matched_indices[i]].alpha<<" height "<<last_detected.obstacles[matched_indices[i]].height<<"\n";
+//            std::cout << std::setprecision(14)<<" Extrapolation Time: "<<temp.header.stamp.toSec()<<" X "<<temp.location.x<<" Y "<<temp.location.y<<" alpha "<<temp.alpha<<" height "<<temp.height<<"\n\n";
 
         }
         interpolated.header.stamp=msg->header.stamp;
@@ -242,9 +242,9 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
 
                             //double stimated_length=(width-1.7*cos(temp.alpha))/sin(temp.alpha);
                             double stimated_length=length-abs(width*sin(temp.yaw));
-                            cout<<"ORIGINAL WIDTH:"<<width<<endl;
-                            cout<<"ORIGINAL LENGTH: "<<length<<endl;
-                            cout<<"STIMATED LENGTH: "<<stimated_length<<endl;
+//                            cout<<"ORIGINAL WIDTH:"<<width<<endl;
+//                            cout<<"ORIGINAL LENGTH: "<<length<<endl;
+//                            cout<<"STIMATED LENGTH: "<<stimated_length<<endl;
 
 //                            temp.width=width; // TODO esto esta a pelo
                             length=stimated_length;
@@ -279,8 +279,8 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
                             ///
                             double x_inc=length_diff*cos(temp.yaw);
                             double y_inc=length_diff*sin(temp.yaw);
-                            cout << "Yaw " << temp.yaw << " Length diff " << length_diff << " cos " << cos(temp.yaw) << endl;
-                            cout<<"initial pose x and y:"<<temp.location.x<<" "<<temp.location.y<<" increments in x and y: "<< x_inc<<" "<< y_inc;
+//                            cout << "Yaw " << temp.yaw << " Length diff " << length_diff << " cos " << cos(temp.yaw) << endl;
+//                            cout<<"initial pose x and y:"<<temp.location.x<<" "<<temp.location.y<<" increments in x and y: "<< x_inc<<" "<< y_inc;
 
 //                            temp.location.x+=x_inc;
 //                            temp.location.y+=y_inc;
@@ -340,11 +340,11 @@ void detection_sub_callback(const perception_msgs::ObstacleListConstPtr msg){
 
                 }
                 else{
-                    cout<<"no match\n";
+//                    cout<<"no match\n";
                 }
 
             }
-            cout<<"_ _ _ _ _ \n";
+//            cout<<"_ _ _ _ _ \n";
 
             if(online==false && interpolated.obstacles.size() > 0){
                 //what timestamp should this have? the individual obstacles have the camera one

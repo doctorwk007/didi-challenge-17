@@ -34,6 +34,7 @@ double distance_threshold;
 double cell_size;
 int grid_dim;
 int max_missings, min_detections;
+long last_time = 0;
 
 unique_ptr<MultiSmartTracker> tracker;
 tf::StampedTransform r2v_transform;
@@ -41,6 +42,14 @@ int ncalls = 0;
 
 void detection_callback(const sensor_msgs::Image::ConstPtr& img_msg, const perception_msgs::ObstacleList::ConstPtr& obs_msg, const sensor_msgs::PointCloud2::ConstPtr & radar_msg)
 {
+    // Time jump filter
+    if(last_time!=0){
+        if(img_msg->header.stamp.toNSec() - last_time > 3000000000){
+            tracker->reset();
+        }
+    }
+    last_time = img_msg->header.stamp.toNSec();
+
     // RADAR PROCESSING
     pcl::PointCloud<pcl::PointXYZ>::Ptr radar_cloud(new pcl::PointCloud<pcl::PointXYZ>); // From ROS Msg
     pcl::PointCloud<pcl::PointXYZ>::Ptr velo_cloud(new pcl::PointCloud<pcl::PointXYZ>); // After transformation

@@ -2,6 +2,7 @@
 #define SMART_TRACKER_HPP
 
 #include <perception_msgs/Obstacle.h>
+#include <didi_challenge/radar_track.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <iostream>
@@ -27,6 +28,10 @@ public:
     int get_detections();
     int get_missings();
     bool is_active();
+    bool isRadarInROI(cv::Point2d p);
+    void associate_radars(vector<cv::Point2d> v);
+    bool update_from_radar();
+    void get_ready();
     int getid() {return obs_.id;}
     double get_score(){return tracking_score_;}
     cv::Rect2d get_roi();
@@ -36,7 +41,9 @@ public:
 private:
     cv::Mat * current_frame_;
     cv::Ptr<cv::Tracker> tracker_ptr_;
+    vector<RadarTrack> tracks_;
     perception_msgs::Obstacle obs_;
+    double x, y, width, height;
     int num_detected_;
     int num_missings_;
     int min_detections_;
