@@ -77,7 +77,7 @@ double movingMean(int id, double estimation){
         last_yaws = &yaws_list[id];
         last_yaws->push_back(estimation);
     }
-    while (last_yaws->size()>5)
+    while (last_yaws->size()>7)
     {
         last_yaws->pop_front();
     }
