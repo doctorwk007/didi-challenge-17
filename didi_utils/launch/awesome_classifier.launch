@@ -5,7 +5,7 @@
   <arg name="stdout" default="screen" />
   <arg name="net_name" default="didi" />
 
-  <include file="$(find didi_challenge)/launch/laser_birdview.launch">
+  <include file="$(find didi_challenge)/launch/laser_birdview_car.launch">
     <arg name="grid_dim" value="70" />
     <arg name="cell_size" value="0.1" />
   </include>

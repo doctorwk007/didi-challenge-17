@@ -10,6 +10,7 @@
   <param name="/birdview/cell_size" value="0.1" />
 
    <node pkg="didi_challenge" type="smart_tracking" name="smart_tracking" output="screen">
+    <param name="distance_threshold" value="40" />
     <param name="max_missings" value="100" />
     <param name="min_detections" value="2" />
   </node>

@@ -21,6 +21,7 @@ tracklets_queue = []
 collection = TrackletCollection()
 last_frame = -1
 aux_poses = []
+aux_frames = []
 
 camera_cols = ["timestamp"]
 camera_dict = defaultdict(list)
@@ -179,12 +180,14 @@ def obstacle_callback(obstacle_list):
 
         while len(aux_poses) <= obstacle.id:  # Loop to add aux poses for every agent
             aux_poses.append([])
+            aux_frames.append([])
 
         while len(collection.tracklets) <= obstacle.id:  # Loop to add tracker elements for every agent
             collection.tracklets.append([])
 
         if obstacle.occluded:  # Store inactive agents poses in auxiliary list
             aux_poses[obstacle.id].append(pose)
+            aux_frames[obstacle.id].append(camera_frame)
             print ('New inactive pose for ID %d' % obstacle.id)
 
         else:
@@ -193,11 +196,12 @@ def obstacle_callback(obstacle_list):
             print ('New pose received for ID %d' % obstacle.id)
             #collection.tracklets[obstacle.id].poses.append(pose)
             aux_poses[obstacle.id].append(pose)
+            aux_frames[obstacle.id].append(camera_frame)
 
             if type(collection.tracklets[obstacle.id]) is list:
                 obs_tracklet = Tracklet(
                     object_type=obstacle.kind_name, l=obstacle.length, w=obstacle.width,
-                    h=obstacle.height, first_frame=camera_frame)
+                    h=obstacle.height, first_frame=aux_frames[obstacle.id][0])
                 # collection.tracklets.insert(camera_frame, obs_tracklet)
                 collection.tracklets[obstacle.id] = obs_tracklet
 

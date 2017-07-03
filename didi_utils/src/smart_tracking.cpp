@@ -8,16 +8,25 @@
 #include <ros/ros.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <perception_msgs/ObstacleList.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/common/transforms.h>
+#include <pcl_ros/transforms.h>
 #include <didi_challenge/multi_smart_tracker.hpp>
+#include <tf/tf.h>
+#include <tf/transform_listener.h>
 #include <radar_driver/RadarTracks.h>
 #include <radar_driver/Track.h>
 using namespace std;
 
-ros::Publisher obst_list_pub_;
+ros::Publisher obst_list_pub_, radar2velo_pub;
 image_transport::Publisher tracking_pub;
 
 double score_threshold;
@@ -27,11 +36,27 @@ int grid_dim;
 int max_missings, min_detections;
 
 unique_ptr<MultiSmartTracker> tracker;
+tf::StampedTransform r2v_transform;
+int ncalls = 0;
 
-void detection_callback(const sensor_msgs::Image::ConstPtr& img_msg, const perception_msgs::ObstacleList::ConstPtr& obs_msg)
+void detection_callback(const sensor_msgs::Image::ConstPtr& img_msg, const perception_msgs::ObstacleList::ConstPtr& obs_msg, const sensor_msgs::PointCloud2::ConstPtr & radar_msg)
 {
+    // RADAR PROCESSING
+    pcl::PointCloud<pcl::PointXYZ>::Ptr radar_cloud(new pcl::PointCloud<pcl::PointXYZ>); // From ROS Msg
+    pcl::PointCloud<pcl::PointXYZ>::Ptr velo_cloud(new pcl::PointCloud<pcl::PointXYZ>); // After transformation
+    fromROSMsg(*radar_msg, *radar_cloud);
+
+    pcl_ros::transformPointCloud (*radar_cloud, *velo_cloud, r2v_transform); // velo_cloud -> Radar points in velodyne coords
+    velo_cloud->header.frame_id = "/velodyne";
+
+    sensor_msgs::PointCloud2 radar2velo;
+    pcl::toROSMsg(*velo_cloud, radar2velo);
+    radar2velo.header.stamp = radar_msg->header.stamp;
+    radar2velo_pub.publish(radar2velo);
+
+//    // TRACKING
     cv::Mat frame = cv_bridge::toCvCopy(img_msg)->image;
-    tracker->update_prediction(frame, obs_msg);
+    tracker->update_prediction(frame, obs_msg, velo_cloud);
     // Draw the detections
     tracker->draw_detections(frame);
 
@@ -47,13 +72,14 @@ void detection_callback(const sensor_msgs::Image::ConstPtr& img_msg, const perce
         obs_list.header = obs_msg->header;
         obst_list_pub_.publish(obs_list);
     }
+    cout << "Num callbacks " << ++ncalls << endl;
 }
 
-void radar_callback(const radar_driver::RadarTracks::ConstPtr& radar_msg){
-    for(auto track : radar_msg->tracks){
-//        cout << "Track"
-    }
+void original_callback(const sensor_msgs::Image::ConstPtr& img_msg, const perception_msgs::ObstacleList::ConstPtr& obs_msg){
+
+    cout << "Num callbacks " << ++ncalls << endl;
 }
+
 
 int main(int argc, char **argv)
 {
@@ -86,20 +112,35 @@ int main(int argc, char **argv)
 
     obst_list_pub_ = private_nh.advertise<perception_msgs::ObstacleList> ("obstacles", 1);
     // Init the MultiTracker pointer
-    tracker = unique_ptr<MultiSmartTracker>(new MultiSmartTracker(tracking_algorithm, score_threshold, distance_threshold, max_missings, min_detections));
+    tracker = unique_ptr<MultiSmartTracker>(new MultiSmartTracker(tracking_algorithm, cell_size, grid_dim, score_threshold, distance_threshold, max_missings, min_detections));
 
     // Init the synchronized subscribers
     message_filters::Subscriber<sensor_msgs::Image> image_sub;
-    image_sub.subscribe(public_nh, image_topic, 10);
+    image_sub.subscribe(public_nh, image_topic, 1);
     message_filters::Subscriber<perception_msgs::ObstacleList> detection_sub;
-    detection_sub.subscribe(public_nh, obstacles_topic, 10);
+    detection_sub.subscribe(public_nh, obstacles_topic, 11);
+    message_filters::Subscriber<sensor_msgs::PointCloud2> radar_sub(public_nh, "/radar/points", 1);
 
-    message_filters::TimeSynchronizer<sensor_msgs::Image, perception_msgs::ObstacleList> sync(image_sub, detection_sub, 10);
-    sync.registerCallback(boost::bind(&detection_callback, _1, _2));
 
-    // RADAR STUFF
-    ros::Subscriber radar_sub;
-    radar_sub=public_nh.subscribe("/radar/tracks", 10, radar_callback);
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, perception_msgs::ObstacleList, sensor_msgs::PointCloud2> MySyncPolicy;
+    // ExactTime takes a queue size as its constructor argument, hence MySyncPolicy(10)
+    message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(20), image_sub, detection_sub, radar_sub);
+    sync.registerCallback(boost::bind(&detection_callback, _1, _2, _3));
+
+//    message_filters::TimeSynchronizer<sensor_msgs::Image, perception_msgs::ObstacleList> sync(image_sub, detection_sub, 100);
+//    sync.registerCallback(boost::bind(&original_callback, _1, _2));
+
+    tf::TransformListener listener;
+    try{
+      listener.waitForTransform("/velodyne", "/radar", ros::Time(0), ros::Duration(20.0));
+      listener.lookupTransform ("/velodyne", "/radar", ros::Time(0), r2v_transform);
+    }catch (tf::TransformException& ex) {
+      ROS_WARN("[draw_frames] TF exception:\n%s", ex.what());
+//      return -1;
+    }
+
+
+    radar2velo_pub = public_nh.advertise<sensor_msgs::PointCloud2> ("radar_points", 1);
 
     ros::Rate rate(10.0);
     while(ros::ok())

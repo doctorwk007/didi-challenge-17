@@ -17,6 +17,9 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   perception_msgs
+  radar_driver
+  tf
+  tf_conversions
 # message_generation
 )
 
@@ -26,6 +29,7 @@ set(OpenCV_DIR "/usr/local/opencv3/share/OpenCV/")
 #set(OpenCV_DIR "/usr/share/OpenCV/")
 find_package(OpenCV REQUIRED)
 set(OpenCV_DIR ${OpenCV2_DIR})
+find_package(PCL 1.7 REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -55,6 +59,15 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+)
+
+link_directories(
+  ${PCL_LIBRARY_DIRS}
+)
+
+add_definitions(
+  ${PCL_DEFINITIONS}
 )
 
 ## Declare a C++ library
@@ -75,6 +88,7 @@ add_dependencies(smart_tracker_lib ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(smart_tracker_lib
   ${OpenCV_LIBS}
+  ${PCL_LIBRARIES}
 )
 
 ## Add cmake target dependencies of the library
@@ -118,4 +132,5 @@ target_link_libraries(smart_tracking
   smart_tracker_lib
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
+  ${PCL_LIBRARIES}
 )
