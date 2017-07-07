@@ -40,6 +40,8 @@
     <param name="max_missings" value="100" />
     <param name="min_detections" value="1" />
   </include>
-  <include file="$(find didi_challenge)/launch/interpolation.launch" />
+
+  <node pkg="didi_challenge" type="refinement" name="refinement" output="$(arg stdout)" required="true"/>
+  <include file="$(find didi_challenge)/launch/interpolation_filter.launch" />
   <include file="$(find didi_challenge)/launch/tracklet_gen.launch" />
 </launch>

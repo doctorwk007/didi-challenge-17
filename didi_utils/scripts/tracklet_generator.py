@@ -231,7 +231,7 @@ def obstacle_callback(obstacle_list):
 
     # end of obstacle loop
     last_frame = camera_frame
-
+    print 'generator', last_frame
 
 def obs_callback(obstacle_list):
     # Check if obstacles in msg and exit otherwise
